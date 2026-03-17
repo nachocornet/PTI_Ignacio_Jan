@@ -2,71 +2,113 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uuid
 import secrets
+import requests  # NUEVO: Para hablar con el Universal Resolver
 
 app = FastAPI(title="DID Verifier Node")
 
-# Base de datos temporal en memoria (En el futuro usaremos una base de datos real)
-# Aquí guardaremos: {"session_id": "nonce_aleatorio"}
+# Base de datos temporal de retos
 active_challenges = {}
 
-# --- MODELOS DE DATOS (Lo que esperamos recibir en los JSON) ---
 class VerifyRequest(BaseModel):
     session_id: str
     did: str
     signature: str
-    presentation: dict  # Aquí vendrá el Verifiable Presentation que diseñe Jan
+    presentation: dict
 
-# --- RUTAS DE LA API ---
+# --- NUEVAS FUNCIONES DEL SPRINT 2 ---
+
+def resolve_did(did_string: str):
+    """
+    TAREA 1: Se conecta al Universal Resolver para descargar el DID Document.
+    """
+    resolver_url = f"https://dev.uniresolver.io/1.0/identifiers/{did_string}"
+    print(f"[RESOLVER] Buscando DID en la red: {resolver_url}")
+    
+    try:
+        response = requests.get(resolver_url, timeout=10) # 10 segundos de límite
+        if response.status_code != 200:
+            print(f"[ERROR] El Resolver devolvió estado {response.status_code}")
+            return None
+        return response.json()
+    except Exception as e:
+        print(f"[ERROR CRÍTICO] Fallo de conexión con el Resolver: {e}")
+        return None
+
+def extract_public_key(did_document: dict):
+    """
+    TAREA 2: Bucea en el JSON gigante para sacar la Clave Pública.
+    """
+    try:
+        # Los DID Documents estándar guardan las claves en 'verificationMethod'
+        doc = did_document.get("didDocument", {})
+        methods = doc.get("verificationMethod", [])
+        
+        if not methods:
+            return None
+            
+        # Cogemos la primera clave pública disponible
+        first_method = methods[0]
+        return first_method
+    except Exception as e:
+        print(f"[ERROR] No se pudo extraer la clave pública: {e}")
+        return None
+
+def verify_crypto_signature(expected_nonce: str, signature: str, public_key_data: dict) -> bool:
+    """
+    TAREA 3: La magia matemática.
+    """
+    print("\n--- INICIANDO VERIFICACIÓN CRIPTOGRÁFICA ---")
+    print(f"1. Mensaje original (Nonce): {expected_nonce}")
+    print(f"2. Firma recibida de Jan: {signature}")
+    print(f"3. Datos de Clave Pública sacados de la Blockchain: {public_key_data}")
+    
+    # IMPORTANTE PARA IGNACIO Y JAN:
+    # Como Jan todavía no ha decidido si usará criptografía RSA, Ed25519 o Secp256k1,
+    # dejamos la estructura preparada. La semana que viene, cuando Jan defina
+    # su algoritmo, aquí meteremos las 3 líneas de la librería 'cryptography' de Python.
+    
+    if signature == "firma_falsa":
+        return False
+        
+    return True # De momento lo damos por válido para que puedas probar el flujo completo
+
+# --- RUTAS DE LA API (Actualizadas) ---
 
 @app.get("/api/auth/challenge")
 async def get_challenge():
-    """
-    Paso 1: El cliente pide entrar. Le generamos un ID de sesión y un Nonce (reto).
-    """
-    session_id = str(uuid.uuid4()) # ID único para este intento de login
-    nonce = secrets.token_hex(16)  # Texto aleatorio seguro
-    
-    # Guardamos el reto temporalmente en nuestra "base de datos"
+    session_id = str(uuid.uuid4())
+    nonce = secrets.token_hex(16)
     active_challenges[session_id] = nonce
-    
-    print(f"[SERVER] Nuevo reto generado para sesión {session_id}: {nonce}")
-    
-    return {
-        "session_id": session_id,
-        "nonce": nonce
-    }
+    return {"session_id": session_id, "nonce": nonce}
 
 @app.post("/api/auth/verify")
 async def verify_presentation(data: VerifyRequest):
-    """
-    Paso 2: El cliente nos devuelve el JSON firmado. Comprobamos si es válido.
-    """
-    # 1. Comprobar si la sesión existe y no ha caducado
+    # TAREA 4: Control de Errores (Si la sesión es falsa o caducó)
     if data.session_id not in active_challenges:
         raise HTTPException(status_code=400, detail="Sesión inválida o caducada.")
     
     expected_nonce = active_challenges[data.session_id]
     
-    # 2. (PLACEHOLDER) Aquí es donde en la Semana 2 meteremos la magia matemática.
-    # Leeremos la clave pública del DID de Jan y verificaremos la firma.
-    is_signature_valid = dummy_crypto_check(data.did, data.signature, expected_nonce)
+    # 1. Hablar con el Resolver
+    did_data = resolve_did(data.did)
+    if not did_data:
+        raise HTTPException(status_code=404, detail=f"El DID '{data.did}' no existe o la red está caída.")
+
+    # 2. Extraer Clave Pública
+    public_key_data = extract_public_key(did_data)
+    if not public_key_data:
+        raise HTTPException(status_code=400, detail="El DID document no contiene claves públicas válidas.")
+
+    # 3. Comprobar Firma Criptográfica
+    is_valid = verify_crypto_signature(expected_nonce, data.signature, public_key_data)
     
-    if not is_signature_valid:
-        raise HTTPException(status_code=401, detail="Firma criptográfica inválida.")
+    if not is_valid:
+        raise HTTPException(status_code=401, detail="Firma inválida. ¡Acceso Denegado!")
     
-    # 3. Si todo va bien, borramos el reto (solo se usa una vez) y damos acceso
+    # 4. Éxito
     del active_challenges[data.session_id]
-    
-    print(f"[SERVER] Autenticación exitosa para el DID: {data.did}")
-    return {"status": "success", "message": f"Bienvenido, usuario {data.did}"}
-
-# --- FUNCIONES AUXILIARES ---
-
-def dummy_crypto_check(did: str, signature: str, expected_nonce: str) -> bool:
-    """
-    Simulador de verificación. De momento, se traga cualquier firma que no esté vacía.
-    La semana que viene cambiaremos esto por código criptográfico real.
-    """
-    if signature == "firma_falsa":
-        return False
-    return True
+    return {
+        "status": "success", 
+        "message": f"¡Bienvenido! He resuelto tu DID y tu firma es correcta.",
+        "resolved_public_key_id": public_key_data.get("id", "Desconocido")
+    }
