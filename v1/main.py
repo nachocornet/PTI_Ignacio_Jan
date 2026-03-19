@@ -3,6 +3,8 @@ from pydantic import BaseModel
 import uuid
 import secrets
 import requests  # NUEVO: Para hablar con el Universal Resolver
+from eth_account import Account
+from eth_account.messages import encode_defunct
 
 app = FastAPI(title="DID Verifier Node")
 
@@ -53,14 +55,33 @@ def extract_public_key(did_document: dict):
         print(f"[ERROR] No se pudo extraer la clave pública: {e}")
         return None
 
-def verify_crypto_signature(expected_nonce: str, signature: str, public_key_data: dict) -> bool:
+def verify_crypto_signature(expected_nonce: str, signature: str, did: str) -> bool:
     """
-    TAREA 3: La magia matemática.
+    Verificación real usando Criptografía de Curva Elíptica (Ethereum).
     """
-    print("\n--- INICIANDO VERIFICACIÓN CRIPTOGRÁFICA ---")
-    print(f"1. Mensaje original (Nonce): {expected_nonce}")
-    print(f"2. Firma recibida de Jan: {signature}")
-    print(f"3. Datos de Clave Pública sacados de la Blockchain: {public_key_data}")
+    try:
+        # 1. Reconstruimos el mensaje original que firmó Jan
+        mensaje_preparado = encode_defunct(text=expected_nonce)
+
+        # 2. Extraemos matemáticamente la dirección pública de quien hizo la firma
+        direccion_recuperada = Account.recover_message(mensaje_preparado, signature=signature)
+
+        # 3. Extraemos la dirección que Jan dice ser (la última parte de su DID)
+        # Ej: de "did:ethr:sepolia:0xCA9..." sacamos "0xCA9..."
+        direccion_del_did = did.split(":")[-1]
+
+        print(f"[CRIPTO] Dirección recuperada de la firma: {direccion_recuperada}")
+        print(f"[CRIPTO] Dirección esperada del DID: {direccion_del_did}")
+
+        # 4. Comparamos ambas (las pasamos a minúsculas por si acaso)
+        if direccion_recuperada.lower() == direccion_del_did.lower():
+            return True
+        else:
+            return False
+
+    except Exception as e:
+        print(f"[ERROR CRIPTO] Fallo al procesar la firma: {e}")
+        return False
     
     # IMPORTANTE PARA IGNACIO Y JAN:
     # Como Jan todavía no ha decidido si usará criptografía RSA, Ed25519 o Secp256k1,
@@ -99,9 +120,8 @@ async def verify_presentation(data: VerifyRequest):
     if not public_key_data:
         raise HTTPException(status_code=400, detail="El DID document no contiene claves públicas válidas.")
 
-    # 3. Comprobar Firma Criptográfica
-    is_valid = verify_crypto_signature(expected_nonce, data.signature, public_key_data)
-    
+    # 3. Comprobar Firma Criptográfica (NUEVO)
+    is_valid = verify_crypto_signature(expected_nonce, data.signature, data.did)    
     if not is_valid:
         raise HTTPException(status_code=401, detail="Firma inválida. ¡Acceso Denegado!")
     
