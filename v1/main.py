@@ -1,134 +1,171 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 import uuid
 import secrets
-import requests  # NUEVO: Para hablar con el Universal Resolver
+import requests
+import datetime
 from eth_account import Account
 from eth_account.messages import encode_defunct
+import json
+import os
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="DID Verifier Node")
+# --- Escudo Anti-DDoS (Rate Limiting) ---
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-# Base de datos temporal de retos
-active_challenges = {}
+# --- Base de Datos ---
+from database import SessionLocal, engine
+import models
 
+# 1. INICIALIZACIÓN DE BASE DE DATOS
+# Crea el archivo ssi_sessions.db y las tablas si no existen
+models.Base.metadata.create_all(bind=engine)
+
+# 2. CONFIGURACIÓN DEL LIMITADOR DE TASA (Anti-DDoS)
+limiter = Limiter(key_func=get_remote_address)
+
+# 3. INICIALIZACIÓN DE LA APP FASTAPI
+app = FastAPI(title="SSI Authenticator Node")
+
+# Conectamos el limitador a la aplicación
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# 4. CONFIGURACIÓN CORS (Para conectar con un futuro Frontend web)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Permite conexiones desde cualquier origen
+    allow_credentials=True,
+    allow_methods=["*"], # Permite todos los métodos HTTP (GET, POST, etc.)
+    allow_headers=["*"], # Permite todas las cabeceras
+)
+
+ISSUER_WALLET_FILE = "issuer_wallet.json"
+ISSUER_DID = None
+ISSUER_PRIVATE_KEY = None
+
+# Verificamos si el servidor tiene su identidad creada antes de arrancar
+if not os.path.exists(ISSUER_WALLET_FILE):
+    print("ADVERTENCIA: No se encontró issuer_wallet.json. Ejecuta setup_issuer.py primero.")
+else:
+    with open(ISSUER_WALLET_FILE, "r") as f:
+        wallet = json.load(f)
+        ISSUER_DID = wallet["did"]
+        ISSUER_PRIVATE_KEY = wallet["private_key"]
+        print(f"Identidad del Emisor cargada correctamente: {ISSUER_DID}")
+
+# 5. DEPENDENCIA DE BASE DE DATOS
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# 6. MODELOS DE VALIDACIÓN (Pydantic)
 class VerifyRequest(BaseModel):
-    session_id: str
     did: str
+    session_id: str
     signature: str
-    presentation: dict
 
-# --- NUEVAS FUNCIONES DEL SPRINT 2 ---
-
-def resolve_did(did_string: str):
-    """
-    TAREA 1: Se conecta al Universal Resolver para descargar el DID Document.
-    """
-    resolver_url = f"https://dev.uniresolver.io/1.0/identifiers/{did_string}"
-    print(f"[RESOLVER] Buscando DID en la red: {resolver_url}")
-    
+# 7. FUNCIONES AUXILIARES
+def resolve_did(did: str):
+    url = f"https://dev.uniresolver.io/1.0/identifiers/{did}"
     try:
-        response = requests.get(resolver_url, timeout=10) # 10 segundos de límite
+        response = requests.get(url, timeout=10)
         if response.status_code != 200:
-            print(f"[ERROR] El Resolver devolvió estado {response.status_code}")
             return None
-        return response.json()
-    except Exception as e:
-        print(f"[ERROR CRÍTICO] Fallo de conexión con el Resolver: {e}")
+        if did.startswith("did:ethr:"):
+            return did.split(":")[-1]
+    except Exception:
         return None
+    return None
 
-def extract_public_key(did_document: dict):
-    """
-    TAREA 2: Bucea en el JSON gigante para sacar la Clave Pública.
-    """
+# ==========================================
+# ENDPOINTS DE LA API
+# ==========================================
+
+# --- HEALTH CHECK ---
+@app.get("/health")
+@limiter.exempt # Exento de límites para poder monitorizarlo siempre
+def health_check(db: Session = Depends(get_db)):
     try:
-        # Los DID Documents estándar guardan las claves en 'verificationMethod'
-        doc = did_document.get("didDocument", {})
-        methods = doc.get("verificationMethod", [])
+        # Petición básica a la BD para asegurar que está conectada y viva
+        db.execute(text("SELECT 1"))
+        db_status = "conectada"
+    except Exception:
+        db_status = "error"
+        raise HTTPException(status_code=503, detail="La base de datos SQLite no responde")
         
-        if not methods:
-            return None
-            
-        # Cogemos la primera clave pública disponible
-        first_method = methods[0]
-        return first_method
-    except Exception as e:
-        print(f"[ERROR] No se pudo extraer la clave pública: {e}")
-        return None
+    return {
+        "status": "online",
+        "database": db_status,
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
 
-def verify_crypto_signature(expected_nonce: str, signature: str, did: str) -> bool:
-    """
-    Verificación real usando Criptografía de Curva Elíptica (Ethereum).
-    """
-    try:
-        # 1. Reconstruimos el mensaje original que firmó Jan
-        mensaje_preparado = encode_defunct(text=expected_nonce)
-
-        # 2. Extraemos matemáticamente la dirección pública de quien hizo la firma
-        direccion_recuperada = Account.recover_message(mensaje_preparado, signature=signature)
-
-        # 3. Extraemos la dirección que Jan dice ser (la última parte de su DID)
-        # Ej: de "did:ethr:sepolia:0xCA9..." sacamos "0xCA9..."
-        direccion_del_did = did.split(":")[-1]
-
-        print(f"[CRIPTO] Dirección recuperada de la firma: {direccion_recuperada}")
-        print(f"[CRIPTO] Dirección esperada del DID: {direccion_del_did}")
-
-        # 4. Comparamos ambas (las pasamos a minúsculas por si acaso)
-        if direccion_recuperada.lower() == direccion_del_did.lower():
-            return True
-        else:
-            return False
-
-    except Exception as e:
-        print(f"[ERROR CRIPTO] Fallo al procesar la firma: {e}")
-        return False
-    
-    # IMPORTANTE PARA IGNACIO Y JAN:
-    # Como Jan todavía no ha decidido si usará criptografía RSA, Ed25519 o Secp256k1,
-    # dejamos la estructura preparada. La semana que viene, cuando Jan defina
-    # su algoritmo, aquí meteremos las 3 líneas de la librería 'cryptography' de Python.
-    
-    if signature == "firma_falsa":
-        return False
-        
-    return True # De momento lo damos por válido para que puedas probar el flujo completo
-
-# --- RUTAS DE LA API (Actualizadas) ---
-
+# --- GENERACIÓN DE RETO (CHALLENGE) ---
 @app.get("/api/auth/challenge")
-async def get_challenge():
+@limiter.limit("5/minute") # Límite: 5 peticiones por minuto por IP
+def get_challenge(request: Request, db: Session = Depends(get_db)):
+    
+    # 1. Limpieza Pasiva (Garbage Collection): Borrar retos más viejos de 10 min
+    tiempo_limite = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
+    db.query(models.AuthSession).filter(models.AuthSession.created_at < tiempo_limite).delete()
+    db.commit()
+    
+    # 2. Generar el nuevo reto
     session_id = str(uuid.uuid4())
     nonce = secrets.token_hex(16)
-    active_challenges[session_id] = nonce
+    
+    # 3. Guardar en SQLite
+    db_session = models.AuthSession(session_id=session_id, nonce=nonce)
+    db.add(db_session)
+    db.commit()
+    
     return {"session_id": session_id, "nonce": nonce}
 
+# --- VERIFICACIÓN DE FIRMA (VERIFY) ---
 @app.post("/api/auth/verify")
-async def verify_presentation(data: VerifyRequest):
-    # TAREA 4: Control de Errores (Si la sesión es falsa o caducó)
-    if data.session_id not in active_challenges:
-        raise HTTPException(status_code=400, detail="Sesión inválida o caducada.")
+@limiter.limit("10/minute") # Límite: 10 peticiones por minuto por IP
+def verify_signature(request: Request, req: VerifyRequest, db: Session = Depends(get_db)):
     
-    expected_nonce = active_challenges[data.session_id]
+    # 1. Buscar la sesión en SQLite
+    db_session = db.query(models.AuthSession).filter(models.AuthSession.session_id == req.session_id).first()
     
-    # 1. Hablar con el Resolver
-    did_data = resolve_did(data.did)
-    if not did_data:
-        raise HTTPException(status_code=404, detail=f"El DID '{data.did}' no existe o la red está caída.")
-
-    # 2. Extraer Clave Pública
-    public_key_data = extract_public_key(did_data)
-    if not public_key_data:
-        raise HTTPException(status_code=400, detail="El DID document no contiene claves públicas válidas.")
-
-    # 3. Comprobar Firma Criptográfica (NUEVO)
-    is_valid = verify_crypto_signature(expected_nonce, data.signature, data.did)    
-    if not is_valid:
-        raise HTTPException(status_code=401, detail="Firma inválida. ¡Acceso Denegado!")
+    if not db_session:
+        raise HTTPException(status_code=400, detail="Sesión inválida o inexistente")
     
-    # 4. Éxito
-    del active_challenges[data.session_id]
-    return {
-        "status": "success", 
-        "message": f"¡Bienvenido! He resuelto tu DID y tu firma es correcta.",
-        "resolved_public_key_id": public_key_data.get("id", "Desconocido")
-    }
+    # 2. Comprobar Caducidad (TTL de 10 minutos)
+    tiempo_actual = datetime.datetime.utcnow()
+    diferencia_tiempo = tiempo_actual - db_session.created_at
+    
+    if diferencia_tiempo.total_seconds() > 600:
+        db.delete(db_session)
+        db.commit()
+        raise HTTPException(status_code=401, detail="El reto ha caducado (Máximo 10 minutos). Vuelve a solicitar acceso.")
+    
+    nonce = db_session.nonce
+    
+    # 3. Matemáticas de Curva Elíptica (Recuperar clave pública de la firma)
+    try:
+        message = encode_defunct(text=nonce)
+        recovered_address = Account.recover_message(message, signature=req.signature)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Firma criptográfica malformada")
+        
+    # 4. Validar Identidad (Comparar dirección recuperada con la del DID)
+    expected_address = req.did.split(":")[-1]
+    
+    if recovered_address.lower() != expected_address.lower():
+        raise HTTPException(status_code=401, detail="Acceso Denegado: La firma no corresponde a este DID")
+        
+    # 5. Destruir el reto tras su uso (Prevenir Replay Attacks)
+    db.delete(db_session)
+    db.commit()
+    
+    return {"status": "success", "message": "Autenticación correcta validada", "did": req.did}

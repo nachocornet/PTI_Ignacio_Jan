@@ -4,16 +4,11 @@ import json
 
 print("Generando nueva identidad descentralizada...")
 
-# 1. Generar semilla aleatoria segura
 priv_key_hex = "0x" + secrets.token_hex(32)
 
-# 2. Crear cuenta de Ethereum
 cuenta = Account.from_key(priv_key_hex)
 
-# 3. Construir el DID
 myDID = f"did:ethr:sepolia:{cuenta.address}"
-
-# 4. Crear la estructura de nuestra "cartera" (Wallet)
 wallet_data = {
     "did": myDID,
     "private_key": priv_key_hex
