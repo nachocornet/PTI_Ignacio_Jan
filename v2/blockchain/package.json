@@ -1,0 +1,19 @@
+{
+  "name": "ssi-blockchain-local",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local blockchain stack for SSI DID and credential revocation",
+  "scripts": {
+    "clean": "hardhat clean",
+    "compile": "hardhat compile",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy_registry.js --network localhost",
+    "bootstrap:local": "hardhat run scripts/bootstrap_issuer.js --network localhost",
+    "full:local": "npm run compile && npm run deploy:local && npm run bootstrap:local"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.7"
+  }
+}

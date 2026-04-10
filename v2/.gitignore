@@ -1,0 +1,20 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local blockchain toolchain
+blockchain/node_modules/
+blockchain/cache/
+blockchain/artifacts/
+
+# Generated deployment outputs
+blockchain/deployments/local/*.json
+blockchain/artifacts_export/*.json
+blockchain_contract.json
+
+# Local secrets and state
+wallet.json
+issuer_wallet.json
+ssi_sessions.db
