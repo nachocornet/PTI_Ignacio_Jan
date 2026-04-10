@@ -5,6 +5,9 @@ __pycache__/
 *.pyd
 
 # Local blockchain toolchain
+node_modules/
+package.json
+package-lock.json
 blockchain/node_modules/
 blockchain/cache/
 blockchain/artifacts/

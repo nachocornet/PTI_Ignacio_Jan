@@ -7,10 +7,20 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+from blockchain_client import SSIBlockchainClient
+
 app = FastAPI(title="VM3: Verificador (Service)")
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+blockchain_client = None
+
+
+def get_blockchain_client() -> SSIBlockchainClient:
+    global blockchain_client
+    if blockchain_client is None:
+        blockchain_client = SSIBlockchainClient()
+    return blockchain_client
 
 @app.post("/api/verify_presentation")
 @limiter.limit("10/minute")
@@ -22,7 +32,9 @@ async def verify_presentation(request: Request, data: dict):
     vc = vp.get("verifiableCredential")
     if not vc:
         raise HTTPException(status_code=400, detail="Falta verifiableCredential en la presentacion")
-    
+
+    vc_payload = None
+
     try:
         # 1. Verificar firma del Emisor en la VC
         vc_payload = copy.deepcopy(vc)
@@ -53,8 +65,40 @@ async def verify_presentation(request: Request, data: dict):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error en validacion criptografica: {str(e)}")
 
-    return {"status": "success", "message": "Verificacion completada. Acceso concedido."}
+    try:
+        bc = get_blockchain_client()
+        issuer_did = vc_payload["issuer"]
+        holder_did = vc_payload["credentialSubject"]["id"]
+        credential_hash = vc_payload.get("credentialHash")
+        if not credential_hash:
+            vc_for_hash = copy.deepcopy(vc_payload)
+            vc_for_hash.pop("credentialHash", None)
+            credential_hash = SSIBlockchainClient.canonical_credential_hash(vc_for_hash)
+
+        if not bc.is_issuer_authorized(issuer_did):
+            raise HTTPException(status_code=401, detail="Issuer DID no autorizado on-chain")
+
+        if not bc.is_did_active(holder_did):
+            raise HTTPException(status_code=401, detail="DID del titular inactivo o revocado on-chain")
+
+        if bc.is_credential_revoked(credential_hash):
+            raise HTTPException(status_code=401, detail="Credencial revocada on-chain")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error consultando blockchain: {str(e)}")
+
+    return {
+        "status": "success",
+        "message": "Verificacion completada. Acceso concedido.",
+        "onchain": {
+            "issuerAuthorized": True,
+            "holderDidActive": True,
+            "credentialRevoked": False,
+        },
+    }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5031)
+    uvicorn.run(app, host="0.0.0.0", port=5011)

@@ -2,6 +2,7 @@ import json
 import uuid
 import datetime
 import os
+import re
 from fastapi import FastAPI, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from eth_account import Account
@@ -12,6 +13,7 @@ from slowapi.errors import RateLimitExceeded
 
 import models
 import database
+from blockchain_client import SSIBlockchainClient
 
 app = FastAPI(title="VM1: Ministerio (Issuer)")
 limiter = Limiter(key_func=get_remote_address)
@@ -27,6 +29,9 @@ with open(ISSUER_FILE, "r") as f:
     ISSUER_DID = issuer_data["did"]
     ISSUER_KEY = issuer_data["private_key"]
 
+DID_PATTERN = re.compile(r"^did:ethr:(0x[a-fA-F0-9]{40})$")
+blockchain_client = None
+
 def get_db():
     db = database.SessionLocal()
     try:
@@ -34,11 +39,21 @@ def get_db():
     finally:
         db.close()
 
+
+def get_blockchain_client() -> SSIBlockchainClient:
+    global blockchain_client
+    if blockchain_client is None:
+        blockchain_client = SSIBlockchainClient()
+    return blockchain_client
+
 @app.post("/api/credentials/issue_dni")
 @limiter.limit("5/minute")
 async def issue_dni(request: Request, data: dict, db: Session = Depends(get_db)):
     numero_dni = data.get("numero_dni")
     did_usuario = data.get("did_ciudadano")
+
+    if not isinstance(did_usuario, str) or not DID_PATTERN.match(did_usuario):
+        raise HTTPException(status_code=400, detail="did_ciudadano invalido")
     
     ciudadano = db.query(models.CitizenDB).filter(models.CitizenDB.numero_dni == numero_dni).first()
     if not ciudadano:
@@ -61,6 +76,27 @@ async def issue_dni(request: Request, data: dict, db: Session = Depends(get_db))
         }
     }
 
+    vc_hash = SSIBlockchainClient.canonical_credential_hash(vc)
+    vc["credentialHash"] = vc_hash
+
+    try:
+        bc = get_blockchain_client()
+        tx_did = bc.set_did_status(
+            holder_did=did_usuario,
+            active=True,
+            metadata_text=f"issue_dni:{numero_dni}",
+            sender_private_key="",
+        )
+        tx_register = bc.register_credential(
+            credential_hash=vc_hash,
+            subject_did=did_usuario,
+            sender_private_key="",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Error de datos blockchain: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Blockchain no disponible para emitir: {str(e)}")
+
     vc_canonical = json.dumps(vc, separators=(',', ':'), sort_keys=True)
     msg = encode_defunct(text=vc_canonical)
     signature = Account.sign_message(msg, private_key=ISSUER_KEY).signature.hex()
@@ -72,8 +108,39 @@ async def issue_dni(request: Request, data: dict, db: Session = Depends(get_db))
         "proofPurpose": "assertionMethod",
         "proofValue": signature
     }
-    
-    return {"credential": vc}
+
+    return {
+        "credential": vc,
+        "onchain": {
+            "didStatusTx": tx_did,
+            "registerCredentialTx": tx_register
+        }
+    }
+
+
+@app.post("/api/credentials/revoke")
+@limiter.limit("5/minute")
+async def revoke_credential(request: Request, data: dict):
+    credential_hash = data.get("credential_hash")
+    reason = data.get("reason", "revoked")
+
+    try:
+        bc = get_blockchain_client()
+        tx_revoke = bc.revoke_credential(
+            credential_hash=credential_hash,
+            reason_text=reason,
+            sender_private_key="",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Entrada invalida para revocacion: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Blockchain no disponible para revocar: {str(e)}")
+
+    return {
+        "status": "revoked",
+        "credential_hash": credential_hash,
+        "tx": tx_revoke,
+    }
 
 if __name__ == "__main__":
     import uvicorn
