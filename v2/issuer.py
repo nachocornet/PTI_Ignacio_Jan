@@ -15,6 +15,7 @@ from slowapi.errors import RateLimitExceeded
 import models
 import database
 from blockchain_client import SSIBlockchainClient
+from settings import SETTINGS
 
 app = FastAPI(title="VM1: Ministerio (Issuer)")
 limiter = Limiter(key_func=get_remote_address)
@@ -23,10 +24,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 def _get_cors_origins() -> list[str]:
-    raw = os.getenv("SSI_CORS_ORIGINS", "http://127.0.0.1:8080,http://localhost:8080")
-    if raw.strip() == "*":
-        return ["*"]
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return SETTINGS.cors_origins
 
 
 app.add_middleware(
@@ -37,7 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ISSUER_FILE = "issuer_wallet.json"
+ISSUER_FILE = SETTINGS.issuer_wallet_file
 if not os.path.exists(ISSUER_FILE):
     raise RuntimeError("Debe ejecutar setup_issuer.py primero")
 
@@ -161,4 +159,4 @@ async def revoke_credential(request: Request, data: dict):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5010)
+    uvicorn.run(app, host=SETTINGS.app_bind_host, port=SETTINGS.issuer_port)

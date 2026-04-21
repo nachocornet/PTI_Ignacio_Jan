@@ -1,6 +1,5 @@
 import json
 import copy
-import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from eth_account import Account
@@ -10,6 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from blockchain_client import SSIBlockchainClient
+from settings import SETTINGS
 
 app = FastAPI(title="VM3: Verificador (Service)")
 limiter = Limiter(key_func=get_remote_address)
@@ -18,10 +18,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 def _get_cors_origins() -> list[str]:
-    raw = os.getenv("SSI_CORS_ORIGINS", "http://127.0.0.1:8080,http://localhost:8080")
-    if raw.strip() == "*":
-        return ["*"]
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return SETTINGS.cors_origins
 
 
 app.add_middleware(
@@ -119,4 +116,4 @@ async def verify_presentation(request: Request, data: dict):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5011)
+    uvicorn.run(app, host=SETTINGS.app_bind_host, port=SETTINGS.verifier_port)

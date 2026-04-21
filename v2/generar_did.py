@@ -1,6 +1,7 @@
 from eth_account import Account
 import secrets
 import json
+from settings import SETTINGS
 
 priv_key_hex = "0x" + secrets.token_hex(32)
 cuenta = Account.from_key(priv_key_hex)
@@ -13,7 +14,7 @@ wallet_data = {
     "private_key": priv_key_hex
 }
 
-with open("wallet.json", "w") as archivo:
+with open(SETTINGS.holder_wallet_file, "w") as archivo:
     json.dump(wallet_data, archivo, indent=4)
 
 print(f"Identidad creada: {myDID}")

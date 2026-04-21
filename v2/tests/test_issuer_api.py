@@ -39,6 +39,37 @@ class FakeBlockchainClient:
         }
 
 
+class FakeBlockchainClientFailValueError(FakeBlockchainClient):
+    def register_credential(self, credential_hash, subject_did, sender_private_key=""):
+        raise ValueError("credential_hash invalido")
+
+    def revoke_credential(self, credential_hash, reason_text="", sender_private_key=""):
+        raise ValueError("credential_hash invalido")
+
+
+class FakeBlockchainClientFailRuntime(FakeBlockchainClient):
+    def set_did_status(self, holder_did, active, metadata_text="", sender_private_key=""):
+        raise RuntimeError("nodo no disponible")
+
+    def register_credential(self, credential_hash, subject_did, sender_private_key=""):
+        return {
+            "txHash": "0x" + ("22" * 32),
+            "blockNumber": 2,
+            "status": 1,
+            "sender": "0x" + ("aa" * 20),
+            "gasUsed": 71000,
+        }
+
+    def revoke_credential(self, credential_hash, reason_text="", sender_private_key=""):
+        return {
+            "txHash": "0x" + ("33" * 32),
+            "blockNumber": 3,
+            "status": 1,
+            "sender": "0x" + ("aa" * 20),
+            "gasUsed": 72000,
+        }
+
+
 def _build_test_client(monkeypatch):
     engine = create_engine(
         "sqlite://",
@@ -74,6 +105,7 @@ def _build_test_client(monkeypatch):
             test_db.close()
 
     issuer.app.dependency_overrides[issuer.get_db] = override_get_db
+    issuer.limiter.reset()
     monkeypatch.setattr(issuer, "get_blockchain_client", lambda: FakeBlockchainClient())
     return TestClient(issuer.app)
 
@@ -153,3 +185,42 @@ def test_revoke_credential_success(monkeypatch):
     body = response.json()
     assert body["status"] == "revoked"
     assert body["tx"]["status"] == 1
+
+
+def test_issue_dni_blockchain_valueerror_returns_400(monkeypatch):
+    client = _build_test_client(monkeypatch)
+    monkeypatch.setattr(issuer, "get_blockchain_client", lambda: FakeBlockchainClientFailValueError())
+    response = client.post(
+        "/api/credentials/issue_dni",
+        json={
+            "did_ciudadano": "did:ethr:0x4444444444444444444444444444444444444444",
+            "numero_dni": "12345678A",
+        },
+    )
+    assert response.status_code == 400
+    assert "blockchain" in response.text.lower()
+
+
+def test_issue_dni_blockchain_runtime_returns_503(monkeypatch):
+    client = _build_test_client(monkeypatch)
+    monkeypatch.setattr(issuer, "get_blockchain_client", lambda: FakeBlockchainClientFailRuntime())
+    response = client.post(
+        "/api/credentials/issue_dni",
+        json={
+            "did_ciudadano": "did:ethr:0x5555555555555555555555555555555555555555",
+            "numero_dni": "12345678A",
+        },
+    )
+    assert response.status_code == 503
+    assert "blockchain" in response.text.lower()
+
+
+def test_revoke_credential_invalid_hash_returns_400(monkeypatch):
+    client = _build_test_client(monkeypatch)
+    monkeypatch.setattr(issuer, "get_blockchain_client", lambda: FakeBlockchainClientFailValueError())
+    response = client.post(
+        "/api/credentials/revoke",
+        json={"credential_hash": "0x1234", "reason": "test"},
+    )
+    assert response.status_code == 400
+    assert "invalida" in response.text.lower() or "hex" in response.text.lower()

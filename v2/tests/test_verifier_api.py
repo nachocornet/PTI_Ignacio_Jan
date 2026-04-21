@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 from eth_account import Account
+from eth_account.messages import encode_defunct
+import json
 
 import verifier
 from conftest import build_signed_vc, build_signed_vp
@@ -42,6 +44,12 @@ def test_verify_missing_vp_returns_400(monkeypatch):
     assert response.status_code == 400
 
 
+def test_verify_missing_verifiable_credential_returns_400(monkeypatch):
+    client, _ = _build_test_client(monkeypatch)
+    response = client.post("/api/verify_presentation", json={"vp": {"type": ["VerifiablePresentation"]}})
+    assert response.status_code == 400
+
+
 def test_verify_success(monkeypatch):
     client, fake = _build_test_client(monkeypatch)
     vp, _ = _make_valid_payload()
@@ -79,3 +87,32 @@ def test_verify_rejects_holder_mismatch(monkeypatch):
     response = client.post("/api/verify_presentation", json={"vp": vp})
     assert response.status_code == 401
     assert "titular" in response.text.lower()
+
+
+def test_verify_works_without_credential_hash_field(monkeypatch):
+    client, _ = _build_test_client(monkeypatch)
+    issuer_account = Account.create()
+    holder = Account.create()
+    holder_did = f"did:ethr:{holder.address}"
+    vc = build_signed_vc(issuer_account, holder_did)
+
+    # Remove hash and re-sign VC so verifier fallback hash path can be exercised.
+    vc.pop("credentialHash", None)
+    vc_payload = dict(vc)
+    vc_payload.pop("proof", None)
+    vc_signature = Account.sign_message(
+        encode_defunct(text=json.dumps(vc_payload, separators=(",", ":"), sort_keys=True)),
+        private_key=issuer_account.key,
+    ).signature.hex()
+    vc["proof"] = {
+        "type": "EcdsaSecp256k1RecoverySignature2020",
+        "created": "2026-04-21T12:00:00Z",
+        "verificationMethod": f"did:ethr:{issuer_account.address}",
+        "proofPurpose": "assertionMethod",
+        "proofValue": vc_signature,
+    }
+
+    vp = build_signed_vp(holder, vc)
+
+    response = client.post("/api/verify_presentation", json={"vp": vp})
+    assert response.status_code == 200

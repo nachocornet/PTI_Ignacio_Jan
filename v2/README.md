@@ -87,21 +87,36 @@ Esto levanta:
 
 **¡Listo para usar!**
 
-## Uso del Frontend
+## Uso del Frontend (Guiado y Autoexplicativo)
 
-1. **Emitir Credencial:**
-   - Carga DID (botón 📂)
-   - Ingresa DNI
-   - Click 🎫
+El frontend ahora incluye explicaciones dentro de la propia interfaz, para que cualquier persona pueda entender el flujo sin abrir código:
 
-2. **Verificar Credencial:**
-   - La credencial se carga automáticamente
-   - Click 🔍 para verificar
-   - Recibe ✓ o ❌ on-chain
+- **Guía rápida superior (Paso 1..4):** resume qué hacer y en qué orden.
+- **Tracker de flujo en vivo:** muestra si ya tienes wallet, VC emitida, VP firmada y verificación completada.
+- **Bloques de explicación por sección:**
+  - en Emisión/Revoación se explica qué se firma y qué se registra on-chain,
+  - en Verificación se explica qué checks realiza el Verifier.
+- **Panel de glosario VC vs VP:** deja claro qué es cada objeto y para qué sirve.
 
-3. **Revocar Credencial:**
-   - Click ❌ para revocar
-   - Verificación posterior fallará (401)
+Flujo recomendado:
+
+1. **Cargar wallet local del holder**
+  - Botón `Cargar wallet local`
+  - El frontend muestra mensaje explícito de carga de clave privada desde `wallet.json`.
+
+2. **Emitir credencial (VC)**
+  - Completa DID + DNI
+  - Botón `Emitir credencial`
+  - Se actualiza panel **VC Bonita** en formato legible (sin JSON crudo).
+
+3. **Verificar presentación (VP)**
+  - Botón `Verificar presentación`
+  - El frontend firma VP localmente y muestra el proceso en banner + actividad.
+  - Se visualiza la VP final en el panel **VP Firmada** con resumen humano.
+
+4. **Revocar para probar rechazo on-chain**
+  - Botón `Revocar credencial`
+  - Una verificación posterior debe fallar con estado de revocación.
 
 Nota: el frontend se sirve por HTTP en `http://127.0.0.1:8080/frontend.html` para que funcione correctamente la carga de `wallet.json` y las peticiones CORS al backend.
 
@@ -313,7 +328,19 @@ Suite incluida en `tests/`:
 - `tests/test_issuer_api.py`: emisión y revocación del Issuer
 - `tests/test_verifier_api.py`: verificación criptográfica + estado on-chain
 - `tests/test_blockchain_client.py`: hashing canónico y validaciones de utilidades
-- `tests/test_frontend_interface.py`: contrato de interfaz (acciones y funciones clave)
+- `tests/test_frontend_interface.py`: contrato de interfaz, guía embebida, glosario y flujo de firma
+
+Cobertura destacada reciente:
+
+- Mensajes explícitos de seguridad UX:
+  - carga de clave privada local,
+  - firma de VP con wallet local.
+- Casos de error API en Issuer:
+  - mapeo a `400` para errores de entrada blockchain,
+  - mapeo a `503` para fallos de disponibilidad blockchain.
+- Casos de robustez en Verifier:
+  - rechazo cuando falta `verifiableCredential`,
+  - fallback correcto cuando no llega `credentialHash` (re-cálculo/verificación).
 
 Ejecutar suite:
 
@@ -327,7 +354,7 @@ Nota: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` evita un conflicto conocido con plugins
 Resultado validado en este proyecto:
 
 ```text
-17 passed
+23 passed
 ```
 
 Smoke test de interfaz servida por HTTP:
@@ -356,6 +383,39 @@ El frontend port del arranque automático también es configurable:
 export SSI_FRONTEND_PORT=8080
 python3 start_all.py
 ```
+
+## Configuración Centralizada (sin hardcode en código)
+
+Toda la configuración operativa se concentra en:
+
+- `settings.py` (lectura única de entorno)
+- `.env.example` (plantilla de variables)
+- `frontend.variables.js` (variables de UI; se regenera automáticamente desde `start_all.py`)
+
+Variables principales:
+
+- `SSI_ISSUER_PORT`, `SSI_VERIFIER_PORT`, `SSI_FRONTEND_PORT`
+- `SSI_BLOCKCHAIN_HOST`, `SSI_BLOCKCHAIN_PORT`
+- `SSI_ISSUER_WALLET_FILE`, `SSI_HOLDER_WALLET_FILE`, `SSI_CONTRACT_FILE`
+
+Ejemplo rápido:
+
+```bash
+export SSI_ISSUER_PORT=6010
+export SSI_VERIFIER_PORT=6011
+export SSI_FRONTEND_PORT=9080
+python3 start_all.py
+```
+
+Con eso, APIs, cliente, setup, frontend y arranque usan la nueva configuración sin editar fuentes.
+
+## Documentacion Final
+
+Documentos recomendados para trabajo diario y entrega:
+
+- [DOCUMENTACION_DEFINITIVA.md](DOCUMENTACION_DEFINITIVA.md): estado final del sistema, decisiones y operacion
+- [GUIA_CODIGO_Y_CAMBIOS.md](GUIA_CODIGO_Y_CAMBIOS.md): guia para entender el codigo y todo lo implementado
+- [GUIA_FRONTEND.md](GUIA_FRONTEND.md): uso funcional de la interfaz paso a paso
 
 ## Limitaciones Actuales
 

@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="frontend.variables.js"></script>
   <style>
     :root {
       --bg: #f7f5ef;
@@ -62,6 +63,33 @@
       padding: 22px;
       display: grid;
       gap: 16px;
+    }
+
+    .guide-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .guide-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f7fbfa;
+      padding: 10px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .guide-item b {
+      font-size: 0.82rem;
+      color: #0f4d47;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .guide-item span {
+      font-size: 0.84rem;
+      color: var(--muted);
     }
 
     .hero-top {
@@ -210,6 +238,54 @@
       color: var(--primary-2);
     }
 
+    .help {
+      color: var(--muted);
+      font-size: 0.83rem;
+      line-height: 1.45;
+      margin-top: -6px;
+    }
+
+    .explain-box {
+      border: 1px dashed #cfe0da;
+      border-radius: 12px;
+      background: #f8fcfb;
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: #385160;
+      line-height: 1.45;
+    }
+
+    .flow-steps {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    .flow-step {
+      border-radius: 10px;
+      border: 1px solid #dbe8e3;
+      padding: 8px;
+      background: #f4f8f7;
+      color: #51606b;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .flow-step.active {
+      background: #e4f6f3;
+      border-color: #9bd3cd;
+      color: #0f4d47;
+    }
+
+    .flow-step.done {
+      background: #eaf7ee;
+      border-color: #b8e0c1;
+      color: #216e39;
+    }
+
     .field {
       display: grid;
       gap: 6px;
@@ -299,7 +375,7 @@
 
     .output-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
       gap: 18px;
     }
 
@@ -364,7 +440,55 @@
       word-break: break-word;
     }
 
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    .kv-item {
+      border: 1px solid #d8e4df;
+      background: #f8fcfb;
+      border-radius: 10px;
+      padding: 8px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .kv-item small {
+      font-size: 0.74rem;
+      color: #6b7b86;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .kv-item strong {
+      font-size: 0.84rem;
+      color: #2c3f4a;
+      word-break: break-word;
+    }
+
+    details {
+      border: 1px dashed #cfe0da;
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: #f8fcfb;
+    }
+
+    summary {
+      cursor: pointer;
+      font-size: 0.84rem;
+      color: #385160;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
     @media (max-width: 1040px) {
+      .guide-strip,
+      .flow-steps {
+        grid-template-columns: repeat(2, minmax(150px, 1fr));
+      }
+
       .conn-grid {
         grid-template-columns: repeat(2, minmax(140px, 1fr));
       }
@@ -376,6 +500,15 @@
 
     @media (max-width: 760px) {
       .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .guide-strip,
+      .flow-steps {
+        grid-template-columns: 1fr;
+      }
+
+      .kv-grid {
         grid-template-columns: 1fr;
       }
 
@@ -395,18 +528,41 @@
     <section class="hero">
       <div class="hero-top">
         <div class="title">
-          <h1>SSI v2 Control Center</h1>
-          <p>Emision, verificacion y revocacion de credenciales con validacion on-chain.</p>
+          <h1 id="app-title">SSI v2 Control Center</h1>
+          <p id="app-subtitle">Emision, verificacion y revocacion de credenciales con validacion on-chain.</p>
         </div>
-        <div class="badges">
-          <span class="badge">Issuer: :5010</span>
-          <span class="badge">Verifier: :5011</span>
-          <span class="badge">Hardhat: :8545</span>
-          <span class="badge">Frontend: :8080</span>
+        <div class="badges" id="app-badges">
+          <span class="badge">Configurable via frontend.variables.js</span>
         </div>
       </div>
 
       <div id="banner" class="banner info"></div>
+
+      <div class="guide-strip" id="guide-strip">
+        <div class="guide-item">
+          <b>Paso 1</b>
+          <span>Carga wallet local del holder para firmar la VP.</span>
+        </div>
+        <div class="guide-item">
+          <b>Paso 2</b>
+          <span>Emite VC con Issuer y registra hash en blockchain.</span>
+        </div>
+        <div class="guide-item">
+          <b>Paso 3</b>
+          <span>Firma VP con la clave privada del holder.</span>
+        </div>
+        <div class="guide-item">
+          <b>Paso 4</b>
+          <span>Verifica y revoca para comprobar estado on-chain.</span>
+        </div>
+      </div>
+
+      <div class="flow-steps" id="flow-steps">
+        <div class="flow-step" id="flow-wallet">Wallet lista</div>
+        <div class="flow-step" id="flow-vc">VC emitida</div>
+        <div class="flow-step" id="flow-vp">VP firmada</div>
+        <div class="flow-step" id="flow-verify">Verificacion final</div>
+      </div>
 
       <div class="conn-grid">
         <div class="conn">
@@ -431,24 +587,36 @@
     <section class="grid">
       <article class="card">
         <h2>1) Emision y Revocacion</h2>
+        <p class="help">Aqui generas la VC y puedes invalidarla on-chain. Si revocas, la verificacion posterior debe fallar.</p>
+
+        <div class="explain-box">
+          <strong>Que ocurre en este bloque:</strong>
+          <span>1) Se valida DID + DNI en Issuer.</span>
+          <span>2) Se firma la VC con la clave del emisor.</span>
+          <span>3) Se registra el hash de VC en blockchain.</span>
+        </div>
 
         <div class="field">
           <label for="issuer-url">Issuer URL</label>
-          <input id="issuer-url" value="http://127.0.0.1:5010" />
+          <input id="issuer-url" value="" placeholder="Se carga desde configuracion" />
         </div>
 
         <div class="field">
           <label for="dni">DNI</label>
-          <input id="dni" value="12345678A" placeholder="12345678A" />
+          <input id="dni" value="" placeholder="Se carga desde configuracion" />
+          <div class="help">Debe existir en la base de datos del Issuer para que emita la VC.</div>
         </div>
 
         <div class="field">
           <label for="holder-did">DID del titular</label>
           <input id="holder-did" placeholder="did:ethr:0x..." />
+          <div class="help">Se rellena automaticamente al cargar wallet local, pero puedes pegar otro DID.</div>
         </div>
 
         <div class="actions">
           <button id="btn-load-wallet" class="btn-ghost">Cargar wallet local</button>
+          <button id="btn-load-wallet-file" class="btn-ghost">Cargar wallet desde archivo</button>
+          <input id="wallet-file" type="file" accept="application/json" style="display:none" />
           <button id="btn-issue" class="btn-main">Emitir credencial</button>
           <button id="btn-revoke" class="btn-accent">Revocar credencial</button>
         </div>
@@ -458,20 +626,41 @@
 
       <article class="card">
         <h2>2) Verificacion</h2>
+        <p class="help">Este paso construye una VP firmada por el holder y la valida contra firma + estado on-chain.</p>
 
-        <div class="field">
-          <label for="verifier-url">Verifier URL</label>
-          <input id="verifier-url" value="http://127.0.0.1:5011" />
+        <div class="explain-box">
+          <strong>Que revisa el Verifier:</strong>
+          <span>1) Firma del Issuer en la VC.</span>
+          <span>2) Firma del Holder en la VP.</span>
+          <span>3) Issuer autorizado, DID activo y no revocacion en blockchain.</span>
         </div>
 
         <div class="field">
-          <label for="credential-json">Credencial VC (JSON)</label>
-          <textarea id="credential-json" placeholder="La VC aparecera aqui al emitir, o pega una manualmente."></textarea>
+          <label for="verifier-url">Verifier URL</label>
+          <input id="verifier-url" value="" placeholder="Se carga desde configuracion" />
+        </div>
+
+        <div class="field">
+          <label>Credencial VC (Vista entendible)</label>
+          <div class="kv-grid" id="vc-readable">
+            <div class="kv-item"><small>Issuer</small><strong id="vc-issuer">Sin dato</strong></div>
+            <div class="kv-item"><small>Titular (DID)</small><strong id="vc-holder">Sin dato</strong></div>
+            <div class="kv-item"><small>Mayor de 18</small><strong id="vc-over18">Sin dato</strong></div>
+            <div class="kv-item"><small>Fecha emision</small><strong id="vc-date">Sin dato</strong></div>
+            <div class="kv-item"><small>Hash credencial</small><strong id="vc-hash">Sin dato</strong></div>
+            <div class="kv-item"><small>Tipos VC</small><strong id="vc-types">Sin dato</strong></div>
+          </div>
+          <div class="help">Aqui ves la credencial en formato humano. JSON solo en modo avanzado.</div>
+          <details>
+            <summary>Modo avanzado: pegar o editar VC como JSON</summary>
+            <textarea id="credential-json" placeholder="Pega aqui una VC JSON solo si necesitas modo avanzado."></textarea>
+          </details>
         </div>
 
         <div class="actions">
           <button id="btn-verify" class="btn-main">Verificar presentacion</button>
           <button id="btn-copy-vc" class="btn-ghost">Copiar VC</button>
+          <button id="btn-copy-vp" class="btn-ghost">Copiar VP</button>
           <button id="btn-refresh" class="btn-ghost">Revisar conexiones</button>
         </div>
 
@@ -481,8 +670,28 @@
 
     <section class="output-grid">
       <section class="panel">
+        <header>VC Bonita</header>
+        <pre id="vc-view"></pre>
+      </section>
+
+      <section class="panel">
+        <header>VP Firmada</header>
+        <pre id="vp-view"></pre>
+      </section>
+
+      <section class="panel">
+        <header>Glosario Rapido (VC vs VP)</header>
+        <pre id="glossary-view"></pre>
+      </section>
+
+      <section class="panel">
         <header>Actividad</header>
         <pre id="activity-log"></pre>
+      </section>
+
+      <section class="panel">
+        <header>Estado de Wallet</header>
+        <pre id="wallet-view"></pre>
       </section>
 
       <section class="panel">
@@ -493,11 +702,19 @@
   </div>
 
   <script>
+    const config = window.SSI_CONFIG || {};
+    const walletSources = Array.isArray(config.walletSources) && config.walletSources.length
+      ? config.walletSources
+      : [];
+
     const state = {
       wallet: null,
       did: null,
       credential: null,
-      credentialHash: null
+      credentialHash: null,
+      walletSource: walletSources[0],
+      walletTriedSources: [],
+      lastVp: null
     };
 
     const $ = (id) => document.getElementById(id);
@@ -515,7 +732,173 @@
     }
 
     function setPayload(obj) {
-      $("payload-view").textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+      if (typeof obj === "string") {
+        $("payload-view").textContent = obj;
+        return;
+      }
+
+      if (obj?.credential && obj?.onchain) {
+        $("payload-view").textContent = [
+          "Resultado de emision:",
+          `- VC creada para: ${obj.credential?.credentialSubject?.id || "n/d"}`,
+          `- Hash VC: ${obj.credential?.credentialHash || "n/d"}`,
+          `- Tx DID: ${obj.onchain?.didStatusTx?.txHash || "n/d"}`,
+          `- Tx Registro VC: ${obj.onchain?.registerCredentialTx?.txHash || "n/d"}`,
+          "- Estado: registrada on-chain"
+        ].join("\n");
+        return;
+      }
+
+      if (obj?.status === "revoked") {
+        $("payload-view").textContent = [
+          "Resultado de revocacion:",
+          `- Hash VC: ${obj.credential_hash || "n/d"}`,
+          `- Tx revocacion: ${obj.tx?.txHash || "n/d"}`,
+          `- Bloque: ${obj.tx?.blockNumber ?? "n/d"}`,
+          "- Estado: credencial revocada"
+        ].join("\n");
+        return;
+      }
+
+      if (obj?.vp && obj?.verifierResponse) {
+        const vc = obj.vp?.verifiableCredential || {};
+        const onchain = obj.verifierResponse?.onchain || {};
+        $("payload-view").textContent = [
+          "Resultado de verificacion:",
+          `- Estado API: ${obj.verifierResponse?.status || "n/d"}`,
+          `- Mensaje: ${obj.verifierResponse?.message || "n/d"}`,
+          `- Titular: ${vc?.credentialSubject?.id || "n/d"}`,
+          `- Hash VC: ${vc?.credentialHash || "n/d"}`,
+          `- Issuer autorizado: ${onchain.issuerAuthorized}`,
+          `- DID holder activo: ${onchain.holderDidActive}`,
+          `- VC revocada: ${onchain.credentialRevoked}`
+        ].join("\n");
+        return;
+      }
+
+      $("payload-view").textContent = "Operacion completada.";
+    }
+
+    function setWalletView(text) {
+      $("wallet-view").textContent = text;
+    }
+
+    function setReadableCredential(vc) {
+      $("vc-issuer").textContent = vc?.issuer || "Sin dato";
+      $("vc-holder").textContent = vc?.credentialSubject?.id || "Sin dato";
+      $("vc-over18").textContent = vc?.credentialSubject?.isOver18 === true ? "Si" : vc?.credentialSubject?.isOver18 === false ? "No" : "Sin dato";
+      $("vc-date").textContent = vc?.issuanceDate || "Sin dato";
+      $("vc-hash").textContent = vc?.credentialHash || "Sin dato";
+      $("vc-types").textContent = Array.isArray(vc?.type) ? vc.type.join(", ") : (vc?.type || "Sin dato");
+    }
+
+    function setVcView(vc) {
+      if (!vc) {
+        $("vc-view").textContent = "Sin VC cargada. Emite una credencial o pega una VC en el textarea para comenzar.";
+        setReadableCredential(null);
+        return;
+      }
+      setReadableCredential(vc);
+      $("vc-view").textContent = [
+        "Resumen de lectura rapida de VC:",
+        `- Issuer: ${vc.issuer || "n/d"}`,
+        `- Titular: ${vc?.credentialSubject?.id || "n/d"}`,
+        `- Claim mayor de edad: ${vc?.credentialSubject?.isOver18 === true ? "Si" : "No"}`,
+        `- Hash: ${vc.credentialHash || "n/d"}`,
+        `- Fecha emision: ${vc.issuanceDate || "n/d"}`,
+        `- Tipos: ${Array.isArray(vc.type) ? vc.type.join(", ") : "n/d"}`,
+        "",
+        "Interpretacion:",
+        "- El emisor firma que este DID es mayor de edad.",
+        "- El hash identifica la VC de forma inmutable en blockchain.",
+        "- Si la VC se revoca on-chain, la verificacion fallara."
+      ].join("\n");
+    }
+
+    function setVpView(vp) {
+      if (!vp) {
+        $("vp-view").textContent = "Aun no se ha firmado ninguna VP. La VP se crea automaticamente al pulsar Verificar presentacion.";
+        return;
+      }
+      const vc = vp.verifiableCredential || {};
+      $("vp-view").textContent = [
+        "Esta VP prueba que el holder controla la wallet asociada a su DID.",
+        "",
+        `- Holder DID (proof): ${vp?.proof?.verificationMethod || "n/d"}`,
+        `- Titular en VC: ${vc?.credentialSubject?.id || "n/d"}`,
+        `- Hash VC presentada: ${vc?.credentialHash || "n/d"}`,
+        `- Firma VP: ${vp?.proof?.proofValue ? `${vp.proof.proofValue.slice(0, 20)}...${vp.proof.proofValue.slice(-10)}` : "n/d"}`,
+        "",
+        "Lectura rapida:",
+        "- Si Holder DID coincide con titular VC, hay control de identidad.",
+        "- Luego Verifier decide con estado on-chain (issuer, DID y revocacion)."
+      ].join("\n");
+    }
+
+    function setGlossaryView() {
+      $("glossary-view").textContent = [
+        "VC (Verifiable Credential)",
+        "- Documento emitido y firmado por Issuer.",
+        "- Contiene claims (ej. isOver18) y credentialHash.",
+        "",
+        "VP (Verifiable Presentation)",
+        "- Paquete que presenta la VC + prueba del holder.",
+        "- Se firma con la clave privada local del holder.",
+        "",
+        "Regla practica:",
+        "- VC responde al que.",
+        "- VP responde al quien lo presenta ahora."
+      ].join("\n");
+    }
+
+    function markStep(stepId, status) {
+      const el = $(stepId);
+      if (!el) return;
+      el.classList.remove("active", "done");
+      if (status === "active") el.classList.add("active");
+      if (status === "done") el.classList.add("done");
+    }
+
+    function applyConfig() {
+      const title = config.appTitle || "SSI v2 Control Center";
+      const subtitle = config.appSubtitle || "Emision, verificacion y revocacion de credenciales con validacion on-chain.";
+      $("app-title").textContent = title;
+      $("app-subtitle").textContent = subtitle;
+
+      const badges = Array.isArray(config.badges) ? config.badges : [];
+      const badgesContainer = $("app-badges");
+      badgesContainer.innerHTML = "";
+      for (const label of badges) {
+        const span = document.createElement("span");
+        span.className = "badge";
+        span.textContent = label;
+        badgesContainer.appendChild(span);
+      }
+
+      const guideSteps = Array.isArray(config.guideSteps) ? config.guideSteps : [];
+      const guideContainer = $("guide-strip");
+      guideContainer.innerHTML = "";
+      for (const step of guideSteps) {
+        const item = document.createElement("div");
+        item.className = "guide-item";
+        const titleEl = document.createElement("b");
+        titleEl.textContent = step.title || "Paso";
+        const textEl = document.createElement("span");
+        textEl.textContent = step.text || "";
+        item.appendChild(titleEl);
+        item.appendChild(textEl);
+        guideContainer.appendChild(item);
+      }
+
+      if (config.urls?.issuer) $("issuer-url").value = config.urls.issuer;
+      if (config.urls?.verifier) $("verifier-url").value = config.urls.verifier;
+      if (config.defaults?.dni) {
+        $("dni").value = config.defaults.dni;
+        $("dni").placeholder = config.defaults.dni;
+      }
+      if (!$("issuer-url").value || !$("verifier-url").value) {
+        setBanner("err", "Falta configuracion de URLs en frontend.variables.js (issuer/verifier).");
+      }
     }
 
     function setBanner(type, text) {
@@ -598,25 +981,85 @@
 
     async function loadWallet() {
       try {
-        const resp = await fetch("/wallet.json");
-        if (!resp.ok) throw new Error("wallet.json no disponible");
+        state.walletTriedSources = [];
+        if (!walletSources.length) {
+          throw new Error("No hay walletSources configuradas en frontend.variables.js");
+        }
+        setBanner("info", "Cargando clave privada local desde fuentes configuradas...");
+        logLine("Iniciando carga de wallet desde fuentes configuradas");
 
-        const wallet = await resp.json();
+        let wallet = null;
+        let loadedFrom = null;
+        for (const source of walletSources) {
+          state.walletTriedSources.push(source);
+          logLine(`Intentando wallet source: ${source}`);
+          const resp = await fetch(source);
+          if (!resp.ok) continue;
+          wallet = await resp.json();
+          loadedFrom = source;
+          break;
+        }
+
+        if (!wallet) {
+          throw new Error(`No se encontro wallet en fuentes: ${state.walletTriedSources.join(", ")}`);
+        }
+
         if (!wallet.private_key || !wallet.did) {
-          throw new Error("wallet.json invalido: falta did o private_key");
+          throw new Error("wallet invalida: falta did o private_key");
         }
 
         state.wallet = new ethers.Wallet(wallet.private_key);
         state.did = wallet.did;
+        state.walletSource = loadedFrom || "desconocido";
 
         $("holder-did").value = wallet.did;
         setChip("conn-wallet", "online", "loaded");
-        setBanner("ok", "Wallet cargada correctamente.");
-        logLine(`Wallet cargada para DID ${wallet.did}`);
+        markStep("flow-wallet", "done");
+        setBanner("ok", `Clave privada local cargada correctamente (${state.walletSource}).`);
+        setWalletView([
+          `Wallet cargada desde: ${state.walletSource}`,
+          `DID: ${wallet.did}`,
+          `Address: ${state.wallet.address}`,
+          `Fuentes intentadas: ${state.walletTriedSources.join(", ")}`
+        ].join("\n"));
+        logLine(`Wallet cargada para DID ${wallet.did} desde ${state.walletSource}`);
       } catch (err) {
         setChip("conn-wallet", "offline", "error");
         setBanner("err", `Error cargando wallet: ${err.message}`);
+        setWalletView([
+          "No se pudo cargar wallet automaticamente.",
+          `Error: ${err.message}`,
+          `Fuentes intentadas: ${state.walletTriedSources.join(", ") || "ninguna"}`,
+          "Puedes usar el boton 'Cargar wallet desde archivo'."
+        ].join("\n"));
         logLine(`Error wallet: ${err.message}`);
+      }
+    }
+
+    async function loadWalletFromFile(file) {
+      try {
+        const raw = await file.text();
+        const wallet = JSON.parse(raw);
+        if (!wallet.private_key || !wallet.did) {
+          throw new Error("wallet invalida: falta did o private_key");
+        }
+
+        state.wallet = new ethers.Wallet(wallet.private_key);
+        state.did = wallet.did;
+        state.walletSource = `archivo:${file.name}`;
+        $("holder-did").value = wallet.did;
+        setChip("conn-wallet", "online", "loaded");
+        markStep("flow-wallet", "done");
+        setBanner("ok", `Wallet cargada desde archivo (${file.name}).`);
+        setWalletView([
+          `Wallet cargada desde archivo: ${file.name}`,
+          `DID: ${wallet.did}`,
+          `Address: ${state.wallet.address}`
+        ].join("\n"));
+        logLine(`Wallet cargada desde archivo ${file.name}`);
+      } catch (err) {
+        setBanner("err", `No se pudo cargar wallet desde archivo: ${err.message}`);
+        logLine(`Error wallet archivo: ${err.message}`);
       }
     }
 
@@ -649,6 +1092,7 @@
         state.credentialHash = body.credential?.credentialHash || null;
 
         $("credential-json").value = JSON.stringify(body.credential, null, 2);
+        setVcView(body.credential);
         $("issuer-summary").textContent = [
           "Credencial emitida correctamente.",
           `Hash: ${state.credentialHash}`,
@@ -658,6 +1102,8 @@
 
         setPayload(body);
         setChip("conn-credential", "online", "ready");
+        markStep("flow-vc", "done");
+        markStep("flow-vp", "active");
         setBanner("ok", "Credencial emitida y registrada on-chain.");
         logLine(`Issue OK hash ${state.credentialHash}`);
       } catch (err) {
@@ -678,6 +1124,10 @@
         throw new Error("No hay wallet de holder cargada.");
       }
 
+      setBanner("info", `Firmando VP con clave privada local guardada en ${state.walletSource}...`);
+      logLine(`Firmando VP con clave privada local (${state.walletSource})`);
+      markStep("flow-vp", "active");
+
       const vp = {
         "@context": ["https://www.w3.org/2018/credentials/v1"],
         type: ["VerifiablePresentation"],
@@ -694,6 +1144,11 @@
         proofValue: sig
       };
 
+      state.lastVp = vp;
+      setVpView(vp);
+      markStep("flow-vp", "done");
+      markStep("flow-verify", "active");
+
       return vp;
     }
 
@@ -703,10 +1158,15 @@
 
       try {
         const verifierUrl = $("verifier-url").value.trim();
+        let credential = state.credential;
         const raw = $("credential-json").value.trim();
-        if (!raw) throw new Error("No hay VC para verificar.");
+        if (!credential && raw) {
+          credential = JSON.parse(raw);
+          state.credential = credential;
+          setVcView(credential);
+        }
+        if (!credential) throw new Error("No hay VC para verificar. Emite una VC o pega JSON en modo avanzado.");
 
-        const credential = JSON.parse(raw);
         const vp = await buildSignedVP(credential);
 
         const resp = await fetch(`${verifierUrl.replace(/\/$/, "")}/api/verify_presentation`, {
@@ -730,6 +1190,7 @@
         ].join("\n");
 
         setPayload({ vp, verifierResponse: body });
+        markStep("flow-verify", "done");
         setBanner("ok", "Verificacion OK: firma y estado on-chain validos.");
         logLine("Verify OK");
       } catch (err) {
@@ -748,8 +1209,13 @@
 
       try {
         const issuerUrl = $("issuer-url").value.trim();
+        let credential = state.credential;
         const raw = $("credential-json").value.trim();
-        const credential = raw ? JSON.parse(raw) : state.credential;
+        if (!credential && raw) {
+          credential = JSON.parse(raw);
+          state.credential = credential;
+          setVcView(credential);
+        }
         const hash = credential?.credentialHash || state.credentialHash;
 
         if (!hash) throw new Error("No se encontro credentialHash para revocar.");
@@ -793,31 +1259,67 @@
 
     async function copyCredential() {
       try {
-        const raw = $("credential-json").value.trim();
-        if (!raw) throw new Error("No hay VC para copiar.");
-        await navigator.clipboard.writeText(raw);
+        const credential = state.credential;
+        if (!credential) throw new Error("No hay VC para copiar.");
+        await navigator.clipboard.writeText(JSON.stringify(credential, null, 2));
         setBanner("info", "VC copiada al portapapeles.");
       } catch (err) {
         setBanner("err", `No se pudo copiar: ${err.message}`);
       }
     }
 
+    async function copyVp() {
+      try {
+        if (!state.lastVp) throw new Error("Aun no existe VP firmada para copiar.");
+        await navigator.clipboard.writeText(JSON.stringify(state.lastVp, null, 2));
+        setBanner("info", "VP copiada al portapapeles.");
+      } catch (err) {
+        setBanner("err", `No se pudo copiar VP: ${err.message}`);
+      }
+    }
+
+    function onCredentialJsonChanged() {
+      const raw = $("credential-json").value.trim();
+      if (!raw) return;
+      try {
+        const credential = JSON.parse(raw);
+        state.credential = credential;
+        state.credentialHash = credential?.credentialHash || state.credentialHash;
+        setVcView(credential);
+        setBanner("info", "VC JSON avanzada parseada y convertida a vista entendible.");
+      } catch {
+        // Keep quiet while typing partial JSON.
+      }
+    }
+
     function bindUI() {
       $("btn-load-wallet").addEventListener("click", loadWallet);
+      $("btn-load-wallet-file").addEventListener("click", () => $("wallet-file").click());
+      $("wallet-file").addEventListener("change", (event) => {
+        const file = event.target.files?.[0];
+        if (file) loadWalletFromFile(file);
+      });
       $("btn-issue").addEventListener("click", issueCredential);
       $("btn-verify").addEventListener("click", verifyCredential);
       $("btn-revoke").addEventListener("click", revokeCredential);
       $("btn-copy-vc").addEventListener("click", copyCredential);
+      $("btn-copy-vp").addEventListener("click", copyVp);
       $("btn-refresh").addEventListener("click", refreshConnections);
+      $("credential-json").addEventListener("input", onCredentialJsonChanged);
     }
 
     async function init() {
+      applyConfig();
       bindUI();
       setPayload("Sin payload aun.");
+      setVcView(null);
+      setVpView(null);
+      setGlossaryView();
+      setWalletView("Wallet aun no cargada.\nSe intentara cargar desde fuentes configuradas.");
       logLine("Frontend listo.");
       await refreshConnections();
       await loadWallet();
-      setInterval(refreshConnections, 15000);
+      setInterval(refreshConnections, Number(config.defaults?.refreshMs) || 15000);
     }
 
     window.addEventListener("load", init);

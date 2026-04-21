@@ -7,6 +7,7 @@ from typing import Any, Dict
 from eth_account import Account
 from eth_utils import keccak
 from web3 import Web3
+from settings import SETTINGS
 
 DID_PATTERN = re.compile(r"^did:ethr:(0x[a-fA-F0-9]{40})$")
 HEX32_PATTERN = re.compile(r"^0x[a-fA-F0-9]{64}$")
@@ -22,9 +23,11 @@ class ContractMetadata:
 class SSIBlockchainClient:
     def __init__(
         self,
-        rpc_url: str = "http://127.0.0.1:8545",
-        contract_file: str = "blockchain_contract.json",
+        rpc_url: str | None = None,
+        contract_file: str | None = None,
     ) -> None:
+        rpc_url = rpc_url or SETTINGS.blockchain_rpc_url
+        contract_file = contract_file or SETTINGS.contract_file
         self.w3 = Web3(Web3.HTTPProvider(rpc_url))
         if not self.w3.is_connected():
             raise RuntimeError(f"No se pudo conectar al nodo Ethereum en {rpc_url}")

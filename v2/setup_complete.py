@@ -5,10 +5,8 @@ Ejecuta todos los pasos necesarios para levantar el sistema completo
 """
 import os
 import sys
-import json
 import subprocess
-import time
-from pathlib import Path
+from settings import SETTINGS
 
 def log(msg, level="INFO"):
     print(f"[{level}] {msg}", flush=True)
@@ -48,7 +46,7 @@ def setup_python_env():
 
 def generate_issuer_wallet():
     log("Generating issuer wallet...")
-    if not os.path.exists("issuer_wallet.json"):
+    if not os.path.exists(SETTINGS.issuer_wallet_file):
         if not run_cmd("python3 setup_issuer.py"):
             return False
         log("Issuer wallet generated", "OK")
@@ -65,7 +63,7 @@ def seed_database():
 
 def generate_holder_wallet():
     log("Generating holder wallet...")
-    if not os.path.exists("wallet.json"):
+    if not os.path.exists(SETTINGS.holder_wallet_file):
         if not run_cmd("python3 generar_did.py"):
             return False
         log("Holder wallet generated", "OK")
@@ -93,7 +91,7 @@ def print_next_steps():
     log("\n" + "="*60, "INFO")
     log("SETUP COMPLETE - NEXT STEPS", "INFO")
     log("="*60, "INFO")
-    print("""
+    print(f"""
 To start the system, run in SEPARATE terminals:
 
 Terminal 1 (Blockchain Node):
@@ -107,14 +105,14 @@ Terminal 2 (Deploy & Bootstrap):
 
 Terminal 3 (Issuer API):
     cd v2
-    python3 -m uvicorn issuer:app --host 127.0.0.1 --port 5010
+    python3 -m uvicorn issuer:app --host {SETTINGS.app_host} --port {SETTINGS.issuer_port}
 
 Terminal 4 (Verifier API):
     cd v2
-    python3 -m uvicorn verifier:app --host 127.0.0.1 --port 5011
+    python3 -m uvicorn verifier:app --host {SETTINGS.app_host} --port {SETTINGS.verifier_port}
 
 Terminal 5 (Open Frontend):
-    Open browser to: http://localhost:8080
+    Open browser to: {SETTINGS.frontend_url}
 
 Or run the automated startup script:
     python3 start_all.py

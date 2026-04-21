@@ -1,6 +1,7 @@
 import json
 import secrets
 from eth_account import Account
+from settings import SETTINGS
 
 def generate_issuer_wallet():
     priv_key = "0x" + secrets.token_hex(32)
@@ -14,7 +15,7 @@ def generate_issuer_wallet():
         "address": account.address
     }
     
-    with open("issuer_wallet.json", "w") as f:
+    with open(SETTINGS.issuer_wallet_file, "w") as f:
         json.dump(wallet_data, f, indent=4)
     print(f"Identidad del Emisor creada: {did}")
 

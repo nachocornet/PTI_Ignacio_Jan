@@ -9,9 +9,12 @@ import time
 import subprocess
 import webbrowser
 import signal
+import json
+
+from settings import SETTINGS
 
 processes = []
-FRONTEND_PORT = int(os.getenv("SSI_FRONTEND_PORT", "8080"))
+FRONTEND_PORT = SETTINGS.frontend_port
 
 def log(msg, level="INFO"):
     print(f"[{level}] {msg}", flush=True)
@@ -51,7 +54,7 @@ def wait_for_port(port, timeout=30):
     while time.time() - start < timeout:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('127.0.0.1', port))
+            result = sock.connect_ex((SETTINGS.app_host, port))
             sock.close()
             if result == 0:
                 return True
@@ -69,6 +72,54 @@ def open_frontend(url):
         log(f"Could not open frontend: {str(e)}", "WARNING")
         log(f"Open manually: {url}", "INFO")
 
+
+def write_frontend_variables() -> None:
+    cfg = {
+        "appTitle": "SSI v2 Control Center",
+        "appSubtitle": "Emision, verificacion y revocacion de credenciales con validacion on-chain.",
+        "badges": [
+            f"Issuer: :{SETTINGS.issuer_port}",
+            f"Verifier: :{SETTINGS.verifier_port}",
+            f"Hardhat: :{SETTINGS.blockchain_port}",
+            f"Frontend: :{SETTINGS.frontend_port}",
+        ],
+        "urls": {
+            "issuer": SETTINGS.issuer_url,
+            "verifier": SETTINGS.verifier_url,
+        },
+        "defaults": {
+            "dni": "12345678A",
+            "refreshMs": 15000,
+        },
+        "guideSteps": [
+            {
+                "title": "Paso 1",
+                "text": "Carga wallet local del holder para firmar la VP.",
+            },
+            {
+                "title": "Paso 2",
+                "text": "Emite VC con Issuer y registra hash en blockchain.",
+            },
+            {
+                "title": "Paso 3",
+                "text": "Firma VP con la clave privada del holder.",
+            },
+            {
+                "title": "Paso 4",
+                "text": "Verifica y revoca para comprobar estado on-chain.",
+            },
+        ],
+        "walletSources": [
+            f"/{SETTINGS.holder_wallet_file}",
+            f"./{SETTINGS.holder_wallet_file}",
+            SETTINGS.holder_wallet_file,
+        ],
+    }
+    content = "window.SSI_CONFIG = " + json.dumps(cfg, indent=2, ensure_ascii=True) + ";\n"
+    with open("frontend.variables.js", "w", encoding="utf-8") as f:
+        f.write(content)
+    log("frontend.variables.js generado desde settings", "OK")
+
 def main():
     log("="*60, "INFO")
     log("SSI v2 - Automatic Startup Script", "INFO")
@@ -80,13 +131,15 @@ def main():
     
     signal.signal(signal.SIGINT, signal_handler)
     
+    write_frontend_variables()
+
     # Step 1: Start Blockchain Node
-    log("\nStep 1: Starting Blockchain Node (port 8545)", "INFO")
+    log(f"\nStep 1: Starting Blockchain Node (port {SETTINGS.blockchain_port})", "INFO")
     blockchain_cmd = "npm run node"
     run_async(blockchain_cmd, cwd="blockchain", name="Blockchain Node")
     
     # Wait for blockchain to be ready
-    if not wait_for_port(8545, timeout=15):
+    if not wait_for_port(SETTINGS.blockchain_port, timeout=15):
         log("Blockchain node failed to start", "ERROR")
         return 1
     log("Blockchain node is ready", "OK")
@@ -109,28 +162,28 @@ def main():
     log("Contract deployed and issuer bootstrapped", "OK")
     
     # Step 3: Start Issuer API
-    log("\nStep 3: Starting Issuer API (port 5010)", "INFO")
-    issuer_cmd = "python3 -m uvicorn issuer:app --host 127.0.0.1 --port 5010"
+    log(f"\nStep 3: Starting Issuer API (port {SETTINGS.issuer_port})", "INFO")
+    issuer_cmd = f"python3 -m uvicorn issuer:app --host {SETTINGS.app_host} --port {SETTINGS.issuer_port}"
     run_async(issuer_cmd, name="Issuer API")
     
-    if not wait_for_port(5010, timeout=10):
+    if not wait_for_port(SETTINGS.issuer_port, timeout=10):
         log("Issuer API failed to start", "ERROR")
         return 1
     log("Issuer API is ready", "OK")
     
     # Step 4: Start Verifier API
-    log("\nStep 4: Starting Verifier API (port 5011)", "INFO")
-    verifier_cmd = "python3 -m uvicorn verifier:app --host 127.0.0.1 --port 5011"
+    log(f"\nStep 4: Starting Verifier API (port {SETTINGS.verifier_port})", "INFO")
+    verifier_cmd = f"python3 -m uvicorn verifier:app --host {SETTINGS.app_host} --port {SETTINGS.verifier_port}"
     run_async(verifier_cmd, name="Verifier API")
     
-    if not wait_for_port(5011, timeout=10):
+    if not wait_for_port(SETTINGS.verifier_port, timeout=10):
         log("Verifier API failed to start", "ERROR")
         return 1
     log("Verifier API is ready", "OK")
     
     # Step 5: Start Frontend static server
     log(f"\nStep 5: Starting Frontend Server (port {FRONTEND_PORT})", "INFO")
-    frontend_cmd = f"python3 -m http.server {FRONTEND_PORT} --bind 127.0.0.1"
+    frontend_cmd = f"python3 -m http.server {FRONTEND_PORT} --bind {SETTINGS.app_host}"
     run_async(frontend_cmd, name="Frontend Server")
     if not wait_for_port(FRONTEND_PORT, timeout=10):
         log("Frontend server failed to start", "ERROR")
@@ -140,7 +193,7 @@ def main():
     # Step 6: Open Frontend
     log("\nStep 6: Opening Frontend", "INFO")
     time.sleep(2)
-    frontend_url = f"http://127.0.0.1:{FRONTEND_PORT}/frontend.html"
+    frontend_url = f"http://{SETTINGS.app_host}:{FRONTEND_PORT}/frontend.html"
     open_frontend(frontend_url)
     
     # Print status
@@ -150,10 +203,10 @@ def main():
     print(
         f"""
 Services ready:
-  - Blockchain Node:  http://127.0.0.1:8545
-  - Issuer API:       http://127.0.0.1:5010
-  - Verifier API:     http://127.0.0.1:5011
-  - Frontend Server:  http://127.0.0.1:{FRONTEND_PORT}
+    - Blockchain Node:  {SETTINGS.blockchain_rpc_url}
+    - Issuer API:       {SETTINGS.issuer_url}
+    - Verifier API:     {SETTINGS.verifier_url}
+    - Frontend Server:  {SETTINGS.frontend_url}
   - Frontend App:     {frontend_url}
 
 Press CTRL+C to stop all services.
