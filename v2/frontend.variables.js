@@ -33,9 +33,5 @@ window.SSI_CONFIG = {
       "text": "Verifica y revoca para comprobar estado on-chain."
     }
   ],
-  "walletSources": [
-    "/wallet.json",
-    "./wallet.json",
-    "wallet.json"
-  ]
+  "walletSources": []
 };

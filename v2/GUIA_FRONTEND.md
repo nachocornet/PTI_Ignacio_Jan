@@ -19,6 +19,12 @@ El frontend no usa endpoints fijos en el HTML. La configuración viene de:
 
 Si cambias puertos/hosts por entorno, vuelve a lanzar `python3 start_all.py` para regenerar este archivo.
 
+Seguridad de servido:
+
+- El servidor de frontend expone solo `frontend.html` y `frontend.variables.js`.
+- No hay listado de directorios.
+- Los archivos internos del repositorio no quedan accesibles por navegador.
+
 ## Mapa visual de la pantalla
 
 - **Cabecera**: endpoints, estado de conexión y banner de feedback.
@@ -43,16 +49,14 @@ Nota UX:
 ## 1) Cargar wallet local
 
 Acción:
-- Pulsar `Cargar wallet local`.
+- Pulsar `Cargar wallet desde archivo`.
 
 Qué debes ver:
-- Mensaje indicando la fuente exacta desde la que se cargó la wallet.
+- Mensaje indicando carga desde archivo local.
 - Estado `Frontend Wallet = loaded`.
 - Tracker marca `Wallet lista`.
 
-Si no carga automáticamente:
-- Revisa `walletSources` en `frontend.variables.js`.
-- Usa `Cargar wallet desde archivo` para cargarla manualmente.
+La autocarga de wallet está desactivada por seguridad.
 
 ## 2) Emitir VC
 

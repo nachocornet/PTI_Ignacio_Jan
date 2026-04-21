@@ -109,11 +109,7 @@ def write_frontend_variables() -> None:
                 "text": "Verifica y revoca para comprobar estado on-chain.",
             },
         ],
-        "walletSources": [
-            f"/{SETTINGS.holder_wallet_file}",
-            f"./{SETTINGS.holder_wallet_file}",
-            SETTINGS.holder_wallet_file,
-        ],
+        "walletSources": [],
     }
     content = "window.SSI_CONFIG = " + json.dumps(cfg, indent=2, ensure_ascii=True) + ";\n"
     with open("frontend.variables.js", "w", encoding="utf-8") as f:
@@ -183,7 +179,7 @@ def main():
     
     # Step 5: Start Frontend static server
     log(f"\nStep 5: Starting Frontend Server (port {FRONTEND_PORT})", "INFO")
-    frontend_cmd = f"python3 -m http.server {FRONTEND_PORT} --bind {SETTINGS.app_host}"
+    frontend_cmd = "python3 frontend_server.py"
     run_async(frontend_cmd, name="Frontend Server")
     if not wait_for_port(FRONTEND_PORT, timeout=10):
         log("Frontend server failed to start", "ERROR")

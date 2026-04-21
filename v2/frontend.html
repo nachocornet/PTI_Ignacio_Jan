@@ -1318,7 +1318,13 @@
       setWalletView("Wallet aun no cargada.\nSe intentara cargar desde fuentes configuradas.");
       logLine("Frontend listo.");
       await refreshConnections();
-      await loadWallet();
+      if (walletSources.length) {
+        await loadWallet();
+      } else {
+        setBanner("info", "Carga la wallet manualmente con 'Cargar wallet desde archivo'.");
+        setWalletView("Autocarga de wallet desactivada por seguridad.\nUsa 'Cargar wallet desde archivo'.");
+        logLine("Autocarga de wallet desactivada; se espera carga manual");
+      }
       setInterval(refreshConnections, Number(config.defaults?.refreshMs) || 15000);
     }
 

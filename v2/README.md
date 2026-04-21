@@ -120,6 +120,15 @@ Flujo recomendado:
 
 Nota: el frontend se sirve por HTTP en `http://127.0.0.1:8080/frontend.html` para que funcione correctamente la carga de `wallet.json` y las peticiones CORS al backend.
 
+Actualizacion de seguridad: el frontend ya no usa `python -m http.server` con listado de directorio.
+Ahora se sirve con `frontend_server.py`, que solo expone:
+
+- `/frontend.html`
+- `/frontend.variables.js`
+
+No se exponen archivos internos del repositorio por HTTP.
+La wallet del holder se carga manualmente desde archivo en la UI (no se sirve por endpoint publico).
+
 ## APIs Reference
 
 ### Issuer (5010)
