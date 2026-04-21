@@ -1,6 +1,8 @@
 import json
 import copy
+import os
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -13,6 +15,22 @@ app = FastAPI(title="VM3: Verificador (Service)")
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+def _get_cors_origins() -> list[str]:
+    raw = os.getenv("SSI_CORS_ORIGINS", "http://127.0.0.1:8080,http://localhost:8080")
+    if raw.strip() == "*":
+        return ["*"]
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_get_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 blockchain_client = None
 
 

@@ -83,7 +83,7 @@ Esto levanta:
 - Deploy contrato
 - Issuer API (5010)
 - Verifier API (5011)
-- Frontend (navegador automático)
+- Frontend server HTTP (8080) + navegador automático
 
 **¡Listo para usar!**
 
@@ -102,6 +102,8 @@ Esto levanta:
 3. **Revocar Credencial:**
    - Click ❌ para revocar
    - Verificación posterior fallará (401)
+
+Nota: el frontend se sirve por HTTP en `http://127.0.0.1:8080/frontend.html` para que funcione correctamente la carga de `wallet.json` y las peticiones CORS al backend.
 
 ## APIs Reference
 
@@ -304,11 +306,56 @@ Confirmado en ejecución real:
 - ✓ Revocación: transacción on-chain confirmada
 - ✓ Bloqueo: post-revocación rechazada correctamente
 
+## Testing Automatizado (pytest)
+
+Suite incluida en `tests/`:
+
+- `tests/test_issuer_api.py`: emisión y revocación del Issuer
+- `tests/test_verifier_api.py`: verificación criptográfica + estado on-chain
+- `tests/test_blockchain_client.py`: hashing canónico y validaciones de utilidades
+- `tests/test_frontend_interface.py`: contrato de interfaz (acciones y funciones clave)
+
+Ejecutar suite:
+
+```bash
+cd v2
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest
+```
+
+Nota: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` evita un conflicto conocido con plugins externos de `web3` en algunos entornos locales.
+
+Resultado validado en este proyecto:
+
+```text
+17 passed
+```
+
+Smoke test de interfaz servida por HTTP:
+
+```bash
+curl -sSf http://127.0.0.1:8080/frontend.html | grep "SSI v2 Control Center"
+```
+
 ## Requisitos
 
 - Node.js >= 18.0
 - Python >= 3.9
 - npm
+
+## Configuración Cloud-Ready
+
+El backend permite orígenes CORS por variable de entorno:
+
+```bash
+export SSI_CORS_ORIGINS="https://tu-frontend.com,http://127.0.0.1:8080"
+```
+
+El frontend port del arranque automático también es configurable:
+
+```bash
+export SSI_FRONTEND_PORT=8080
+python3 start_all.py
+```
 
 ## Limitaciones Actuales
 

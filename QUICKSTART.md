@@ -48,7 +48,7 @@ Esto levanta:
 - 🔗 Blockchain local (Hardhat)
 - 📋 Issuer API (5010)
 - ✅ Verifier API (5011)
-- 🌐 Frontend automáticamente en navegador
+- 🌐 Frontend server (8080) y apertura automática en navegador
 
 **Tiempo estimado: 30 segundos**
 
@@ -85,7 +85,8 @@ v2/
 | Iniciar | `python3 start_all.py` |
 | Manual nodo | `cd blockchain && npm run node` |
 | Manual APIs | `python3 -m uvicorn issuer:app --host 127.0.0.1 --port 5010` |
-| Tests | `python3 client.py` |
+| Tests rápidos e2e | `python3 client.py` |
+| Suite pytest | `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest` |
 
 ## API Endpoints
 
@@ -132,12 +133,26 @@ Los siguientes pasos se pueden hacer DESPUÉS:
 3. Implementar tests CI/CD
 4. Agregar observabilidad
 
+## Configuración Cloud
+
+Para desplegar backend + frontend separados en cloud:
+
+```bash
+export SSI_CORS_ORIGINS="https://tu-frontend.com"
+```
+
+En local puedes mantener:
+
+```bash
+export SSI_CORS_ORIGINS="http://127.0.0.1:8080,http://localhost:8080"
+```
+
 ## Ayuda
 
 - 📖 Ver [v2/README.md](v2/README.md) para detalles técnicos
 - 🐛 Problema: Blockchain no inicia → `cd v2/blockchain && npm install`
 - 🐛 Problema: APIs no responden → Esperar 5 segundos y recargar
-- 🐛 Problema: Frontend en blanco → Abrir en nueva ventanay sin caché
+- 🐛 Problema: Frontend en blanco → Abrir en nueva ventana y sin caché
 
 ## Estado Actual del Repo
 

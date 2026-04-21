@@ -1,85 +1,108 @@
-# # Sistema de Autenticación Descentralizada (SSI) con DIDs
+# PTI_Ignacio_Jan - SSI con DID, VC y Blockchain
 
-Este repositorio contiene la prueba de concepto (MVP) de un sistema de Autenticación mediante Identidad Auto-Soberana (SSI). Permite a los usuarios autenticarse en un servidor utilizando Identificadores Descentralizados (DIDs) y criptografía de curva elíptica (Ethereum), leyendo las credenciales desde un archivo de configuración local seguro.
+Repositorio de trabajo para una implementación de Self-Sovereign Identity (SSI) en dos etapas:
 
-## Arquitectura del Proyecto
+- `v1/`: MVP de autenticación con DID y firma.
+- `v2/`: versión completa con emisión de credenciales, verificación híbrida (firma + on-chain), revocación y frontend.
 
-El proyecto se divide en dos componentes principales:
+## Documentación principal
 
-1. **El Cliente / Holder (`client.py`, `generar_did.py` y `wallet.json`):**
-   * `generar_did.py`: Script de inicialización. Genera identidades matemáticas desde cero (`did:ethr`) y almacena las claves localmente de forma estructurada en `wallet.json`.
-   * `client.py`: Actúa como la "cartera" (Wallet) del usuario. Lee las credenciales de `wallet.json` en tiempo de ejecución y firma criptográficamente los retos del servidor.
-2. **El Servidor / Verifier (`main.py`):**
-   * Construido con FastAPI.
-   * Emite retos (Nonces) aleatorios para mitigar ataques de repetición.
-   * Resuelve los DIDs consultando la API pública de la W3C/DIF (`dev.uniresolver.io`).
-   * Verifica matemáticamente las firmas entrantes validando que la dirección pública recuperada coincida con la del DID.
+- [README raíz](README.md)
+- [Diferencias v1 vs v2](DIFERENCIAS_V1_V2.md)
+- [Guía de despliegue](DESPLIEGUE.md)
+- [Guía y explicación de uso](GUIA_Y_EXPLICACION.md)
+- [Explicación general](EXPLICACION_GENERAL.md)
+- [Quickstart operativo](QUICKSTART.md)
+- [README técnico de v2](v2/README.md)
 
-## Requisitos e Instalación
+## Estructura del repositorio
 
-Para ejecutar este proyecto, es necesario disponer de Python 3.8+.
-
-1. **Clonar el repositorio:**
-   ```bash
-   git clone <URL_DE_TU_REPO>
-   cd did_backend
-   ```
-
-2. **Crear y activar el entorno virtual:**
-   * Entornos basados en Unix (Linux / Mac / WSL):
-     ```bash
-     python3 -m venv venv
-     source venv/bin/activate
-     ```
-
-3. **Instalar dependencias:**
-   Asegúrate de que el archivo `requirements.txt` contiene las siguientes especificaciones:
-   ```text
-   fastapi==0.110.0
-   uvicorn==0.27.1
-   pydantic>=2.9
-   requests==2.31.0
-   eth-account==0.11.0
-   ```
-   Instala los paquetes ejecutando:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Configuración de Identidad y Seguridad
-
-Antes de poder ejecutar el cliente y realizar el inicio de sesión, es necesario generar la identidad local del usuario.
-Ejecuta el siguiente comando en la terminal:
-```bash
-python3 generar_did.py
-```
-Este proceso creará un archivo `wallet.json` en el directorio raíz que contendrá el DID público y la clave privada de Ethereum.
-
-**Nota de Seguridad:** Es fundamental asegurar que el archivo `.gitignore` incluye la línea `wallet.json`. Esto previene la subida accidental de claves privadas al control de versiones.
-
-## Ejecución del Flujo de Autenticación (Prueba End-to-End)
-
-Para realizar la prueba completa, se requieren dos terminales independientes con el entorno virtual activado.
-
-### 1. Inicializar el Servidor (Terminal 1)
-Levanta el nodo verificador ejecutando:
-```bash
-uvicorn main:app --reload --port 5010
-```
-El servidor quedará a la escucha en `http://localhost:5010`.
-
-### 2. Ejecutar el Cliente (Terminal 2)
-Inicia la solicitud de autenticación ejecutando:
-```bash
-python3 client.py
+```text
+PTI_Ignacio_Jan/
+├── README.md
+├── QUICKSTART.md
+├── DIFERENCIAS_V1_V2.md
+├── DESPLIEGUE.md
+├── GUIA_Y_EXPLICACION.md
+├── EXPLICACION_GENERAL.md
+├── v1/
+└── v2/
 ```
 
-**Secuencia de operaciones:**
-1. El cliente lee `wallet.json` y solicita un reto al servidor (`GET /api/auth/challenge`).
-2. El servidor devuelve un `session_id` temporal y un `nonce`.
-3. El cliente firma el `nonce` con su clave privada y envía el paquete de datos (`POST /api/auth/verify`).
-4. El servidor verifica matemáticamente la firma. Si el resultado es válido, devuelve un código HTTP 200 confirmando el acceso.
+## Qué es cada carpeta
 
-## Próximos Pasos (Sprint 3)
-* **Verifiable Credentials (VCs):** Implementar la emisión y verificación de credenciales estructuradas que se adjuntarán a la presentación.
-* **Persistencia de Datos:** Migrar la gestión de sesiones en memoria de FastAPI hacia una base de datos relacional ligera (SQLite) para un control de acceso más robusto.
+## `v1/`
+
+Primera versión del sistema. Incluye autenticación con DID en flujo challenge/response, sin blockchain para revocación de credenciales.
+
+### Archivos principales en `v1/`
+
+- `main.py`: servidor FastAPI principal de autenticación DID.
+- `client.py`: cliente que solicita challenge, firma y verifica acceso.
+- `generar_did.py`: genera una identidad local y archivo wallet.
+- `setup_issuer.py`: inicialización de identidad del emisor.
+- `database.py`: configuración de SQLite con SQLAlchemy.
+- `models.py`: modelos de datos (sesiones y ciudadanos).
+- `requirements.txt`: dependencias Python de v1.
+- `wallet.json`: identidad local del usuario (privada, no subir a remoto).
+- `ssi_sessions.db`: base de datos local.
+- `README.md`: documentación específica de v1.
+
+## `v2/`
+
+Versión avanzada del sistema SSI con estado de confianza on-chain y frontend interactivo.
+
+### Backend y lógica SSI en `v2/`
+
+- `issuer.py`: API de emisión y revocación de credenciales.
+- `verifier.py`: API de verificación de presentaciones.
+- `blockchain_client.py`: cliente Web3 para lecturas/escrituras del contrato.
+- `client.py`: script de cliente para pruebas rápidas de flujo.
+- `database.py`: motor y sesión SQLAlchemy.
+- `models.py`: modelos de base de datos.
+- `seed_db.py`: carga ciudadanos de prueba en SQLite.
+- `setup_issuer.py`: genera identidad del emisor.
+- `generar_did.py`: genera DID de holder.
+- `check_blockchain.py`: health check de conectividad blockchain.
+- `setup_complete.py`: setup automatizado completo.
+- `start_all.py`: arranque integral (blockchain + APIs + frontend server).
+- `frontend.html`: interfaz web principal del sistema.
+
+### Blockchain en `v2/blockchain/`
+
+- `contracts/SSIRegistry.sol`: smart contract de estado SSI.
+- `scripts/deploy_registry.js`: despliegue del contrato.
+- `scripts/bootstrap_issuer.js`: autorización inicial del issuer.
+- `hardhat.config.js`: configuración de Hardhat.
+- `package.json`: scripts npm de compilación/despliegue.
+- `.env.example`: ejemplo de variables de entorno para redes.
+- `README.md`: guía específica de blockchain local.
+
+### Testing en `v2/tests/`
+
+- `test_issuer_api.py`: pruebas de endpoints del issuer.
+- `test_verifier_api.py`: pruebas de verificación y reglas on-chain.
+- `test_blockchain_client.py`: pruebas unitarias de utilidades blockchain.
+- `test_frontend_interface.py`: pruebas estáticas de contrato de interfaz.
+- `conftest.py`: helpers y utilidades compartidas de tests.
+- `pytest.ini`: configuración de pytest.
+
+## Estado actual del proyecto
+
+- v1: estable como referencia del MVP inicial.
+- v2: funcional en local con flujo end-to-end validado.
+- Pruebas pytest: disponibles y ejecutables.
+- Pendiente estratégico principal: migración de red local Hardhat a testnet (por ejemplo Sepolia) y despliegue cloud final.
+
+## Comandos clave (v2)
+
+```bash
+cd v2
+python3 setup_complete.py
+python3 start_all.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest
+```
+
+## Nota de seguridad
+
+No subir claves privadas ni archivos sensibles (`wallet.json`, `issuer_wallet.json`, `.env` reales) al repositorio público.

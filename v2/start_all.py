@@ -9,10 +9,9 @@ import time
 import subprocess
 import webbrowser
 import signal
-import platform
-from pathlib import Path
 
 processes = []
+FRONTEND_PORT = int(os.getenv("SSI_FRONTEND_PORT", "8080"))
 
 def log(msg, level="INFO"):
     print(f"[{level}] {msg}", flush=True)
@@ -61,20 +60,14 @@ def wait_for_port(port, timeout=30):
         time.sleep(0.5)
     return False
 
-def open_frontend():
-    """Open frontend in default browser"""
+def open_frontend(url):
+    """Open frontend URL in default browser"""
     try:
-        frontend_path = os.path.abspath('frontend.html')
-        if platform.system() == 'Windows':
-            os.startfile(frontend_path)
-        elif platform.system() == 'Darwin':
-            subprocess.run(['open', frontend_path])
-        else:
-            subprocess.run(['xdg-open', frontend_path])
-        log(f"Frontend opened at {frontend_path}", "OK")
+        webbrowser.open(url)
+        log(f"Frontend opened at {url}", "OK")
     except Exception as e:
         log(f"Could not open frontend: {str(e)}", "WARNING")
-        log(f"Open manually: file://{os.path.abspath('frontend.html')}", "INFO")
+        log(f"Open manually: {url}", "INFO")
 
 def main():
     log("="*60, "INFO")
@@ -135,24 +128,37 @@ def main():
         return 1
     log("Verifier API is ready", "OK")
     
-    # Step 5: Open Frontend
-    log("\nStep 5: Opening Frontend", "INFO")
+    # Step 5: Start Frontend static server
+    log(f"\nStep 5: Starting Frontend Server (port {FRONTEND_PORT})", "INFO")
+    frontend_cmd = f"python3 -m http.server {FRONTEND_PORT} --bind 127.0.0.1"
+    run_async(frontend_cmd, name="Frontend Server")
+    if not wait_for_port(FRONTEND_PORT, timeout=10):
+        log("Frontend server failed to start", "ERROR")
+        return 1
+    log("Frontend server is ready", "OK")
+
+    # Step 6: Open Frontend
+    log("\nStep 6: Opening Frontend", "INFO")
     time.sleep(2)
-    open_frontend()
+    frontend_url = f"http://127.0.0.1:{FRONTEND_PORT}/frontend.html"
+    open_frontend(frontend_url)
     
     # Print status
-    log("\n" + "="*60, "INFO")
-    log("✓ ALL SERVICES RUNNING", "OK")
-    log("="*60, "INFO")
-    print("""
+    log("\n" + "=" * 60, "INFO")
+    log("ALL SERVICES RUNNING", "OK")
+    log("=" * 60, "INFO")
+    print(
+        f"""
 Services ready:
-  • Blockchain Node:  http://127.0.0.1:8545
-  • Issuer API:       http://127.0.0.1:5010
-  • Verifier API:     http://127.0.0.1:5011
-  • Frontend:         file://frontend.html (opened in browser)
+  - Blockchain Node:  http://127.0.0.1:8545
+  - Issuer API:       http://127.0.0.1:5010
+  - Verifier API:     http://127.0.0.1:5011
+  - Frontend Server:  http://127.0.0.1:{FRONTEND_PORT}
+  - Frontend App:     {frontend_url}
 
 Press CTRL+C to stop all services.
-    """)
+"""
+    )
     log("="*60, "INFO")
     
     # Keep running

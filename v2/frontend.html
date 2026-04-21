@@ -1,552 +1,826 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SSI v2 - Gestor de Credenciales</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSI v2 Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f7f5ef;
+      --bg-2: #eef4f2;
+      --surface: #ffffff;
+      --text: #1f2933;
+      --muted: #5b6b77;
+      --line: #d8e2de;
+      --primary: #0f766e;
+      --primary-2: #155e75;
+      --accent: #ea580c;
+      --ok: #1f8a3b;
+      --bad: #c92a2a;
+      --warn: #9a6700;
+      --shadow: 0 12px 35px rgba(21, 94, 117, 0.14);
+      --radius: 16px;
+    }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        .container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 1200px;
-            width: 100%;
-            overflow: hidden;
-        }
+    body {
+      font-family: "Sora", sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(15, 118, 110, 0.14), transparent 42%),
+        radial-gradient(circle at 85% 100%, rgba(234, 88, 12, 0.16), transparent 45%),
+        linear-gradient(145deg, var(--bg), var(--bg-2));
+      padding: 28px 18px;
+    }
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
+    .app {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
+    .hero,
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
+    .hero {
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
 
-        .content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            padding: 40px;
-        }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
 
-        @media (max-width: 768px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-        }
+    .title {
+      display: grid;
+      gap: 6px;
+    }
 
-        .section {
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 25px;
-            background: #f9f9f9;
-        }
+    .title h1 {
+      font-size: 1.6rem;
+      letter-spacing: 0.2px;
+    }
 
-        .section h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
+    .title p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
 
-        .form-group {
-            margin-bottom: 15px;
-        }
+    .badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
-        }
+    .badge {
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 0.82rem;
+      background: #fbfcfc;
+    }
 
-        input, textarea, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 0.95em;
-            font-family: 'Courier New', monospace;
-        }
+    .banner {
+      border-radius: 12px;
+      padding: 12px 14px;
+      border: 1px solid transparent;
+      font-size: 0.9rem;
+      display: none;
+    }
 
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 5px rgba(102,126,234,0.3);
-        }
+    .banner.show {
+      display: block;
+    }
 
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: transform 0.2s;
-            width: 100%;
-        }
+    .banner.info {
+      background: #ecf8f7;
+      border-color: #b6dfdb;
+      color: #0f4d47;
+    }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
-        }
+    .banner.ok {
+      background: #edf8ef;
+      border-color: #b9e2c0;
+      color: #1e5f2f;
+    }
 
-        button:active {
-            transform: translateY(0);
-        }
+    .banner.err {
+      background: #fceeee;
+      border-color: #f3bcbc;
+      color: #7c1f1f;
+    }
 
-        .button-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
+    .conn-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap: 10px;
+    }
 
-        .message {
-            padding: 12px;
-            border-radius: 5px;
-            margin-top: 15px;
-            font-size: 0.9em;
-            word-break: break-all;
-        }
+    .conn {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+      background: #fafdfc;
+    }
 
-        .success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
+    .conn small {
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
 
-        .error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
 
-        .info {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-        }
+    .chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
 
-        .warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-        }
+    .chip.pending {
+      color: #6b7280;
+      background: #f3f4f6;
+      border-color: #e5e7eb;
+    }
 
-        .status-box {
-            background: white;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            max-height: 300px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-        }
+    .chip.online {
+      color: #216e39;
+      background: #eaf7ee;
+      border-color: #b8e0c1;
+    }
 
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+    .chip.offline {
+      color: #a52a2a;
+      background: #feeeee;
+      border-color: #f3c1c1;
+    }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      gap: 18px;
+    }
 
-        .hash-display {
-            background: #f0f0f0;
-            padding: 10px;
-            border-radius: 5px;
-            word-break: break-all;
-            font-family: monospace;
-            font-size: 0.85em;
-            margin: 10px 0;
-        }
+    .card {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
 
-        .hidden {
-            display: none;
-        }
+    .card h2 {
+      font-size: 1.08rem;
+      color: var(--primary-2);
+    }
 
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
-        }
+    .field {
+      display: grid;
+      gap: 6px;
+    }
 
-        .tab-btn {
-            background: none;
-            border: none;
-            padding: 10px 15px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #999;
-            border-bottom: 3px solid transparent;
-        }
+    .field label {
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
 
-        .tab-btn.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-        }
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid #cfdad5;
+      background: #fcfefd;
+      border-radius: 10px;
+      padding: 10px 11px;
+      color: var(--text);
+      font-size: 0.93rem;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
 
-        .tab-content {
-            display: none;
-        }
+    textarea {
+      resize: vertical;
+      min-height: 132px;
+      font-family: "JetBrains Mono", monospace;
+      line-height: 1.45;
+      font-size: 0.83rem;
+    }
 
-        .tab-content.active {
-            display: block;
-        }
-    </style>
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 13px;
+      font-size: 0.89rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s ease, opacity 0.2s ease, box-shadow 0.15s ease;
+      min-width: 140px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .btn-main {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.25);
+    }
+
+    .btn-accent {
+      color: #ffffff;
+      background: linear-gradient(135deg, #f97316, var(--accent));
+      box-shadow: 0 8px 20px rgba(234, 88, 12, 0.23);
+    }
+
+    .btn-ghost {
+      color: var(--primary-2);
+      background: #ecf7f6;
+      border: 1px solid #cce7e3;
+    }
+
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fcfefd;
+      overflow: hidden;
+    }
+
+    .panel header {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      background: #f3faf9;
+      font-size: 0.83rem;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .panel pre {
+      margin: 0;
+      padding: 12px;
+      min-height: 200px;
+      max-height: 340px;
+      overflow: auto;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.79rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-line {
+      border-bottom: 1px dashed #e4ece8;
+      padding: 8px 0;
+      font-size: 0.82rem;
+      color: #32414d;
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    .log-line:last-child {
+      border-bottom: none;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mono {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      color: #32414d;
+      background: #f2f7f5;
+      border: 1px solid #d8e4df;
+      border-radius: 10px;
+      padding: 10px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    @media (max-width: 1040px) {
+      .conn-grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+      }
+
+      .output-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero,
+      .card {
+        border-radius: 12px;
+      }
+
+      button {
+        min-width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🔐 SSI v2</h1>
-            <p>Identidad Autosoberana con Verificación On-Chain</p>
+  <div class="app">
+    <section class="hero">
+      <div class="hero-top">
+        <div class="title">
+          <h1>SSI v2 Control Center</h1>
+          <p>Emision, verificacion y revocacion de credenciales con validacion on-chain.</p>
+        </div>
+        <div class="badges">
+          <span class="badge">Issuer: :5010</span>
+          <span class="badge">Verifier: :5011</span>
+          <span class="badge">Hardhat: :8545</span>
+          <span class="badge">Frontend: :8080</span>
+        </div>
+      </div>
+
+      <div id="banner" class="banner info"></div>
+
+      <div class="conn-grid">
+        <div class="conn">
+          <small>Issuer API</small>
+          <span id="conn-issuer" class="chip pending">checking</span>
+        </div>
+        <div class="conn">
+          <small>Verifier API</small>
+          <span id="conn-verifier" class="chip pending">checking</span>
+        </div>
+        <div class="conn">
+          <small>Frontend Wallet</small>
+          <span id="conn-wallet" class="chip pending">not loaded</span>
+        </div>
+        <div class="conn">
+          <small>Credential State</small>
+          <span id="conn-credential" class="chip pending">empty</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>1) Emision y Revocacion</h2>
+
+        <div class="field">
+          <label for="issuer-url">Issuer URL</label>
+          <input id="issuer-url" value="http://127.0.0.1:5010" />
         </div>
 
-        <div class="content">
-            <!-- Section 1: Issuer Operations -->
-            <div class="section">
-                <h2>📝 Emisor (Ministerio)</h2>
-
-                <div class="form-group">
-                    <label>DNI Ciudadano:</label>
-                    <input type="text" id="dni" placeholder="12345678A" value="12345678A">
-                </div>
-
-                <div class="form-group">
-                    <label>DID del Ciudadano:</label>
-                    <textarea id="holder-did" placeholder="did:ethr:0x..." style="height: 40px;"></textarea>
-                </div>
-
-                <button onclick="loadHolderDID()">📂 Cargar DID del Archivo</button>
-
-                <div class="button-group">
-                    <button onclick="issueCredential()">🎫 Emitir Credencial</button>
-                    <button onclick="revokeCredential()">❌ Revocar</button>
-                </div>
-
-                <div id="issuer-message" class="message hidden"></div>
-
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>Estado de Emisión:</label>
-                    <div class="status-box" id="issuer-status">Listo</div>
-                </div>
-            </div>
-
-            <!-- Section 2: Verifier Operations -->
-            <div class="section">
-                <h2>✅ Verificador</h2>
-
-                <div class="form-group">
-                    <label>Credencial (JSON):</label>
-                    <textarea id="credential-json" placeholder="{...}" style="height: 100px;"></textarea>
-                </div>
-
-                <button onclick="loadLastCredential()">📂 Cargar Última Credencial</button>
-                <button onclick="verifyPresentation()">🔍 Verificar</button>
-
-                <div id="verifier-message" class="message hidden"></div>
-
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>Resultado de Verificación:</label>
-                    <div class="status-box" id="verifier-status">Esperando entrada...</div>
-                </div>
-            </div>
+        <div class="field">
+          <label for="dni">DNI</label>
+          <input id="dni" value="12345678A" placeholder="12345678A" />
         </div>
 
-        <!-- Section 3: Configuration -->
-        <div class="content">
-            <div class="section">
-                <h2>⚙️ Configuración</h2>
-
-                <div class="form-group">
-                    <label>URL Issuer:</label>
-                    <input type="text" id="issuer-url" value="http://127.0.0.1:5010">
-                </div>
-
-                <div class="form-group">
-                    <label>URL Verifier:</label>
-                    <input type="text" id="verifier-url" value="http://127.0.0.1:5011">
-                </div>
-
-                <button onclick="testConnections()">🧪 Probar Conexiones</button>
-
-                <div id="config-message" class="message hidden"></div>
-            </div>
-
-            <div class="section">
-                <h2>📊 Información del Sistema</h2>
-                <div class="status-box" id="system-info">
-                    <strong>Sistema SSI v2</strong><br>
-                    Emisor: Puerto 5010<br>
-                    Verificador: Puerto 5011<br>
-                    Blockchain: Hardhat (8545)<br>
-                    <br>
-                    Estado: Cargando...
-                </div>
-            </div>
+        <div class="field">
+          <label for="holder-did">DID del titular</label>
+          <input id="holder-did" placeholder="did:ethr:0x..." />
         </div>
-    </div>
 
-    <script>
-        let lastCredential = null;
+        <div class="actions">
+          <button id="btn-load-wallet" class="btn-ghost">Cargar wallet local</button>
+          <button id="btn-issue" class="btn-main">Emitir credencial</button>
+          <button id="btn-revoke" class="btn-accent">Revocar credencial</button>
+        </div>
 
-        function showMessage(elementId, message, type = 'info') {
-            const element = document.getElementById(elementId);
-            element.className = `message ${type}`;
-            element.textContent = message;
-            element.classList.remove('hidden');
-        }
+        <div class="mono" id="issuer-summary">Sin operaciones aun.</div>
+      </article>
 
-        function updateStatus(elementId, content) {
-            document.getElementById(elementId).textContent = content;
-        }
+      <article class="card">
+        <h2>2) Verificacion</h2>
 
-        async function loadHolderDID() {
-            try {
-                const response = await fetch('wallet.json');
-                if (!response.ok) throw new Error('No se encontró wallet.json');
-                const data = await response.json();
-                document.getElementById('holder-did').value = data.did;
-                showMessage('issuer-message', 'DID cargado correctamente', 'success');
-            } catch (error) {
-                showMessage('issuer-message', `Error: ${error.message}`, 'error');
-            }
-        }
+        <div class="field">
+          <label for="verifier-url">Verifier URL</label>
+          <input id="verifier-url" value="http://127.0.0.1:5011" />
+        </div>
 
-        async function issueCredential() {
-            try {
-                const dni = document.getElementById('dni').value;
-                const did = document.getElementById('holder-did').value;
-                const url = document.getElementById('issuer-url').value;
+        <div class="field">
+          <label for="credential-json">Credencial VC (JSON)</label>
+          <textarea id="credential-json" placeholder="La VC aparecera aqui al emitir, o pega una manualmente."></textarea>
+        </div>
 
-                if (!dni || !did) {
-                    showMessage('issuer-message', 'Falta DNI o DID', 'error');
-                    return;
-                }
+        <div class="actions">
+          <button id="btn-verify" class="btn-main">Verificar presentacion</button>
+          <button id="btn-copy-vc" class="btn-ghost">Copiar VC</button>
+          <button id="btn-refresh" class="btn-ghost">Revisar conexiones</button>
+        </div>
 
-                updateStatus('issuer-status', 'Emitiendo credencial...');
+        <div class="mono" id="verify-summary">Aun no verificada.</div>
+      </article>
+    </section>
 
-                const response = await fetch(`${url}/api/credentials/issue_dni`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ did_ciudadano: did, numero_dni: dni })
-                });
+    <section class="output-grid">
+      <section class="panel">
+        <header>Actividad</header>
+        <pre id="activity-log"></pre>
+      </section>
 
-                if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(error);
-                }
+      <section class="panel">
+        <header>Payload / Respuesta</header>
+        <pre id="payload-view"></pre>
+      </section>
+    </section>
+  </div>
 
-                const data = await response.json();
-                lastCredential = data.credential;
+  <script>
+    const state = {
+      wallet: null,
+      did: null,
+      credential: null,
+      credentialHash: null
+    };
 
-                const summary = `
-✓ Credencial Emitida
-Hash: ${data.credential.credentialHash}
-DID Issuer: ${data.credential.issuer}
-DID Subject: ${data.credential.credentialSubject.id}
+    const $ = (id) => document.getElementById(id);
 
-Transacciones On-Chain:
-- setDidStatus: ${data.onchain.didStatusTx.txHash}
-- registerCredential: ${data.onchain.registerCredentialTx.txHash}
-                `;
+    function nowTag() {
+      return new Date().toLocaleTimeString();
+    }
 
-                updateStatus('issuer-status', summary);
-                showMessage('issuer-message', '✓ Credencial emitida y registrada on-chain', 'success');
-                
-                // Auto-populate verifier
-                document.getElementById('credential-json').value = JSON.stringify(data.credential, null, 2);
-            } catch (error) {
-                updateStatus('issuer-status', `Error: ${error.message}`);
-                showMessage('issuer-message', `Error: ${error.message}`, 'error');
-            }
-        }
+    function logLine(text) {
+      const box = $("activity-log");
+      const row = document.createElement("div");
+      row.className = "log-line";
+      row.textContent = `[${nowTag()}] ${text}`;
+      box.prepend(row);
+    }
 
-        async function verifyPresentation() {
-            try {
-                const credentialJson = document.getElementById('credential-json').value;
-                const url = document.getElementById('verifier-url').value;
+    function setPayload(obj) {
+      $("payload-view").textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+    }
 
-                if (!credentialJson) {
-                    showMessage('verifier-message', 'Falta credencial', 'error');
-                    return;
-                }
+    function setBanner(type, text) {
+      const b = $("banner");
+      b.className = `banner ${type} show`;
+      b.textContent = text;
+    }
 
-                const credential = JSON.parse(credentialJson);
-                updateStatus('verifier-status', 'Verificando...');
+    function setChip(id, mode, text) {
+      const el = $(id);
+      el.className = `chip ${mode}`;
+      el.textContent = text;
+    }
 
-                // Create VP from VC
-                const vp = {
-                    "@context": ["https://www.w3.org/2018/credentials/v1"],
-                    "type": ["VerifiablePresentation"],
-                    "verifiableCredential": credential,
-                    "proof": { "proofValue": "0x" + Math.random().toString(16).slice(2) }
-                };
+    function setBusy(button, busy) {
+      button.disabled = busy;
+      if (busy) {
+        button.dataset.original = button.textContent;
+        button.textContent = "Procesando...";
+      } else if (button.dataset.original) {
+        button.textContent = button.dataset.original;
+      }
+    }
 
-                const response = await fetch(`${url}/api/verify_presentation`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ vp })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    const summary = `
-✓ Verificación Exitosa
-Status: ${data.status}
-Message: ${data.message}
-
-Validación On-Chain:
-- Issuer Autorizado: ${data.onchain.issuerAuthorized ? '✓' : '✗'}
-- DID Activo: ${data.onchain.holderDidActive ? '✓' : '✗'}
-- No Revocada: ${!data.onchain.credentialRevoked ? '✓' : '✗'}
-                    `;
-                    updateStatus('verifier-status', summary);
-                    showMessage('verifier-message', '✓ Credencial válida y verificada', 'success');
-                } else {
-                    updateStatus('verifier-status', `Error: ${data.detail}`);
-                    showMessage('verifier-message', `Rechazo: ${data.detail}`, 'error');
-                }
-            } catch (error) {
-                updateStatus('verifier-status', `Error: ${error.message}`);
-                showMessage('verifier-message', `Error: ${error.message}`, 'error');
-            }
-        }
-
-        async function revokeCredential() {
-            try {
-                const credentialJson = document.getElementById('credential-json').value;
-                const url = document.getElementById('issuer-url').value;
-
-                if (!credentialJson) {
-                    showMessage('issuer-message', 'Falta credencial', 'error');
-                    return;
-                }
-
-                const credential = JSON.parse(credentialJson);
-                const hash = credential.credentialHash;
-
-                if (!hash) {
-                    showMessage('issuer-message', 'La credencial no tiene hash', 'error');
-                    return;
-                }
-
-                updateStatus('issuer-status', 'Revocando credencial...');
-
-                const response = await fetch(`${url}/api/credentials/revoke`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        credential_hash: hash,
-                        reason: 'Revocada desde frontend'
-                    })
-                });
-
-                if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(error);
-                }
-
-                const data = await response.json();
-                const summary = `
-✓ Credencial Revocada
-Hash: ${hash}
-TX Revoke: ${data.tx.txHash}
-                `;
-
-                updateStatus('issuer-status', summary);
-                showMessage('issuer-message', '✓ Credencial revocada on-chain', 'success');
-            } catch (error) {
-                updateStatus('issuer-status', `Error: ${error.message}`);
-                showMessage('issuer-message', `Error: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadLastCredential() {
-            if (lastCredential) {
-                document.getElementById('credential-json').value = JSON.stringify(lastCredential, null, 2);
-                showMessage('verifier-message', 'Última credencial cargada', 'info');
-            } else {
-                showMessage('verifier-message', 'No hay credencial cargada aún', 'warning');
-            }
-        }
-
-        async function testConnections() {
-            try {
-                const issuerUrl = document.getElementById('issuer-url').value;
-                const verifierUrl = document.getElementById('verifier-url').value;
-
-                let result = 'Probando conexiones...\n';
-
-                try {
-                    const issuerTest = await Promise.race([
-                        fetch(`${issuerUrl}/docs`),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-                    ]);
-                    result += `✓ Issuer (${issuerUrl}): Conectado\n`;
-                } catch (e) {
-                    result += `✗ Issuer (${issuerUrl}): Desconectado\n`;
-                }
-
-                try {
-                    const verifierTest = await Promise.race([
-                        fetch(`${verifierUrl}/docs`),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-                    ]);
-                    result += `✓ Verifier (${verifierUrl}): Conectado\n`;
-                } catch (e) {
-                    result += `✗ Verifier (${verifierUrl}): Desconectado\n`;
-                }
-
-                document.getElementById('system-info').textContent = result;
-                showMessage('config-message', 'Prueba completada', 'info');
-            } catch (error) {
-                showMessage('config-message', `Error: ${error.message}`, 'error');
-            }
-        }
-
-        // Initialize on page load
-        window.addEventListener('load', () => {
-            testConnections();
-            loadHolderDID().catch(() => {});
+    function canonicalize(value) {
+      if (Array.isArray(value)) return value.map(canonicalize);
+      if (value && typeof value === "object") {
+        const ordered = {};
+        Object.keys(value).sort().forEach((k) => {
+          ordered[k] = canonicalize(value[k]);
         });
-    </script>
+        return ordered;
+      }
+      return value;
+    }
+
+    function canonicalStringify(value) {
+      return JSON.stringify(canonicalize(value));
+    }
+
+    function parseErrorBody(raw) {
+      try {
+        const asJson = JSON.parse(raw);
+        return asJson.detail || raw;
+      } catch {
+        return raw;
+      }
+    }
+
+    async function pingDocs(baseUrl) {
+      const url = `${baseUrl.replace(/\/$/, "")}/docs`;
+      const resp = await fetch(url, { method: "GET" });
+      return resp.ok;
+    }
+
+    async function refreshConnections() {
+      const issuerUrl = $("issuer-url").value.trim();
+      const verifierUrl = $("verifier-url").value.trim();
+
+      setChip("conn-issuer", "pending", "checking");
+      setChip("conn-verifier", "pending", "checking");
+
+      try {
+        const ok = await pingDocs(issuerUrl);
+        setChip("conn-issuer", ok ? "online" : "offline", ok ? "online" : "offline");
+      } catch {
+        setChip("conn-issuer", "offline", "offline");
+      }
+
+      try {
+        const ok = await pingDocs(verifierUrl);
+        setChip("conn-verifier", ok ? "online" : "offline", ok ? "online" : "offline");
+      } catch {
+        setChip("conn-verifier", "offline", "offline");
+      }
+
+      setChip("conn-wallet", state.wallet ? "online" : "pending", state.wallet ? "loaded" : "not loaded");
+      setChip("conn-credential", state.credential ? "online" : "pending", state.credential ? "ready" : "empty");
+    }
+
+    async function loadWallet() {
+      try {
+        const resp = await fetch("/wallet.json");
+        if (!resp.ok) throw new Error("wallet.json no disponible");
+
+        const wallet = await resp.json();
+        if (!wallet.private_key || !wallet.did) {
+          throw new Error("wallet.json invalido: falta did o private_key");
+        }
+
+        state.wallet = new ethers.Wallet(wallet.private_key);
+        state.did = wallet.did;
+
+        $("holder-did").value = wallet.did;
+        setChip("conn-wallet", "online", "loaded");
+        setBanner("ok", "Wallet cargada correctamente.");
+        logLine(`Wallet cargada para DID ${wallet.did}`);
+      } catch (err) {
+        setChip("conn-wallet", "offline", "error");
+        setBanner("err", `Error cargando wallet: ${err.message}`);
+        logLine(`Error wallet: ${err.message}`);
+      }
+    }
+
+    async function issueCredential() {
+      const btn = $("btn-issue");
+      setBusy(btn, true);
+
+      try {
+        const issuerUrl = $("issuer-url").value.trim();
+        const did = $("holder-did").value.trim();
+        const dni = $("dni").value.trim();
+
+        if (!did || !dni) throw new Error("Debes completar DID y DNI.");
+
+        const payload = { did_ciudadano: did, numero_dni: dni };
+        const resp = await fetch(`${issuerUrl.replace(/\/$/, "")}/api/credentials/issue_dni`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await resp.text();
+        const body = text ? JSON.parse(text) : {};
+
+        if (!resp.ok) {
+          throw new Error(body.detail || text || "Error emitiendo credencial");
+        }
+
+        state.credential = body.credential;
+        state.credentialHash = body.credential?.credentialHash || null;
+
+        $("credential-json").value = JSON.stringify(body.credential, null, 2);
+        $("issuer-summary").textContent = [
+          "Credencial emitida correctamente.",
+          `Hash: ${state.credentialHash}`,
+          `setDidStatus tx: ${body.onchain?.didStatusTx?.txHash || "n/a"}`,
+          `registerCredential tx: ${body.onchain?.registerCredentialTx?.txHash || "n/a"}`
+        ].join("\n");
+
+        setPayload(body);
+        setChip("conn-credential", "online", "ready");
+        setBanner("ok", "Credencial emitida y registrada on-chain.");
+        logLine(`Issue OK hash ${state.credentialHash}`);
+      } catch (err) {
+        $("issuer-summary").textContent = `Error emitiendo: ${err.message}`;
+        setBanner("err", `Issue fallo: ${err.message}`);
+        logLine(`Issue error: ${err.message}`);
+      } finally {
+        setBusy(btn, false);
+        refreshConnections();
+      }
+    }
+
+    async function buildSignedVP(credential) {
+      if (!state.wallet) {
+        await loadWallet();
+      }
+      if (!state.wallet || !state.did) {
+        throw new Error("No hay wallet de holder cargada.");
+      }
+
+      const vp = {
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        type: ["VerifiablePresentation"],
+        verifiableCredential: credential
+      };
+
+      const canonical = canonicalStringify(vp);
+      const sig = await state.wallet.signMessage(canonical);
+
+      vp.proof = {
+        type: "EcdsaSecp256k1RecoverySignature2020",
+        proofPurpose: "authentication",
+        verificationMethod: state.did,
+        proofValue: sig
+      };
+
+      return vp;
+    }
+
+    async function verifyCredential() {
+      const btn = $("btn-verify");
+      setBusy(btn, true);
+
+      try {
+        const verifierUrl = $("verifier-url").value.trim();
+        const raw = $("credential-json").value.trim();
+        if (!raw) throw new Error("No hay VC para verificar.");
+
+        const credential = JSON.parse(raw);
+        const vp = await buildSignedVP(credential);
+
+        const resp = await fetch(`${verifierUrl.replace(/\/$/, "")}/api/verify_presentation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vp })
+        });
+
+        const text = await resp.text();
+        const body = text ? JSON.parse(text) : {};
+
+        if (!resp.ok) {
+          throw new Error(body.detail || text || "Verificacion fallida");
+        }
+
+        $("verify-summary").textContent = [
+          "Verificacion exitosa.",
+          `Issuer autorizado: ${body.onchain?.issuerAuthorized}`,
+          `Holder activo: ${body.onchain?.holderDidActive}`,
+          `Credential revoked: ${body.onchain?.credentialRevoked}`
+        ].join("\n");
+
+        setPayload({ vp, verifierResponse: body });
+        setBanner("ok", "Verificacion OK: firma y estado on-chain validos.");
+        logLine("Verify OK");
+      } catch (err) {
+        $("verify-summary").textContent = `Verificacion rechazada: ${err.message}`;
+        setBanner("err", `Verify fallo: ${err.message}`);
+        logLine(`Verify error: ${err.message}`);
+      } finally {
+        setBusy(btn, false);
+        refreshConnections();
+      }
+    }
+
+    async function revokeCredential() {
+      const btn = $("btn-revoke");
+      setBusy(btn, true);
+
+      try {
+        const issuerUrl = $("issuer-url").value.trim();
+        const raw = $("credential-json").value.trim();
+        const credential = raw ? JSON.parse(raw) : state.credential;
+        const hash = credential?.credentialHash || state.credentialHash;
+
+        if (!hash) throw new Error("No se encontro credentialHash para revocar.");
+
+        const payload = {
+          credential_hash: hash,
+          reason: "revocada desde frontend"
+        };
+
+        const resp = await fetch(`${issuerUrl.replace(/\/$/, "")}/api/credentials/revoke`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await resp.text();
+        const body = text ? JSON.parse(text) : {};
+
+        if (!resp.ok) {
+          throw new Error(body.detail || text || "Error revocando");
+        }
+
+        $("issuer-summary").textContent = [
+          "Credencial revocada.",
+          `Hash: ${hash}`,
+          `Revoke tx: ${body.tx?.txHash || "n/a"}`
+        ].join("\n");
+
+        setPayload(body);
+        setBanner("ok", "Revocacion confirmada en blockchain.");
+        logLine(`Revoke OK hash ${hash}`);
+      } catch (err) {
+        $("issuer-summary").textContent = `Error revocando: ${err.message}`;
+        setBanner("err", `Revoke fallo: ${err.message}`);
+        logLine(`Revoke error: ${err.message}`);
+      } finally {
+        setBusy(btn, false);
+        refreshConnections();
+      }
+    }
+
+    async function copyCredential() {
+      try {
+        const raw = $("credential-json").value.trim();
+        if (!raw) throw new Error("No hay VC para copiar.");
+        await navigator.clipboard.writeText(raw);
+        setBanner("info", "VC copiada al portapapeles.");
+      } catch (err) {
+        setBanner("err", `No se pudo copiar: ${err.message}`);
+      }
+    }
+
+    function bindUI() {
+      $("btn-load-wallet").addEventListener("click", loadWallet);
+      $("btn-issue").addEventListener("click", issueCredential);
+      $("btn-verify").addEventListener("click", verifyCredential);
+      $("btn-revoke").addEventListener("click", revokeCredential);
+      $("btn-copy-vc").addEventListener("click", copyCredential);
+      $("btn-refresh").addEventListener("click", refreshConnections);
+    }
+
+    async function init() {
+      bindUI();
+      setPayload("Sin payload aun.");
+      logLine("Frontend listo.");
+      await refreshConnections();
+      await loadWallet();
+      setInterval(refreshConnections, 15000);
+    }
+
+    window.addEventListener("load", init);
+  </script>
 </body>
 </html>
