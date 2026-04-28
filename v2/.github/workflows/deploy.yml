@@ -107,8 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           ssh -p ${DB_SSH_PORT} -o BatchMode=yes "${SSH_USER}@${NATTECH_HOST}" \
-            "cd ${DEPLOY_PATH} && docker compose -f config/compose_vms/vm_db/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm_db/docker_compose.yml up -d --build"
-
+            "cd ${DEPLOY_PATH} && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml up -d --build"
       - name: Wait for DB to be ready
         run: |
           set -euo pipefail
@@ -190,8 +189,7 @@ PY"
         run: |
           set -euo pipefail
           ssh -p ${BACKEND_SSH_PORT} -o BatchMode=yes "${SSH_USER}@${NATTECH_HOST}" \
-            "cd ${DEPLOY_PATH} && docker compose -f config/compose_vms/vm_servers/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm_servers/docker_compose.yml up -d --build"
-
+            "cd ${DEPLOY_PATH} && docker compose --env-file .env -f config/compose_vms/vm_servers/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm_servers/docker_compose.yml up -d --build"
       - name: Wait for backend health
         run: |
           set -euo pipefail
@@ -270,7 +268,7 @@ PY"
         run: |
           set -euo pipefail
           ssh -p ${FRONTEND_SSH_PORT} -o BatchMode=yes "${SSH_USER}@${NATTECH_HOST}" \
-            "cd ${DEPLOY_PATH} && docker compose -f config/compose_vms/vm-frontend/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm-frontend/docker_compose.yml up -d --build"
+            "cd ${DEPLOY_PATH} && docker compose --env-file .env -f config/compose_vms/vm-frontend/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm-frontend/docker_compose.yml up -d --build"
 
       - name: Smoke test public URLs
         run: |

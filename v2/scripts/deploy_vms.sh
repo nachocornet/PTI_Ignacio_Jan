@@ -188,7 +188,7 @@ POSTGRES_DB=${POSTGRES_DB}
 POSTGRES_PASSWORD=${DB_PASSWORD}
 EOF
 copy_file "$TMPDIR/db.env" "$DB_SSH_PORT" "${DEPLOY_PATH}/.env"
-remote_cmd "$DB_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose -f config/compose_vms/vm_db/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm_db/docker_compose.yml up -d --build"
+remote_cmd "$DB_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml up -d --build"
 wait_remote_tcp "$DB_SSH_PORT" "127.0.0.1" "5432"
 
 echo "[deploy-vms] Syncing repository to Backend VM..."
@@ -207,7 +207,7 @@ SSI_HOLDER_WALLET_FILE=deployments/runtime/wallet.json
 SSI_CORS_ORIGINS=${FRONTEND_EXTERNAL_URL},${BACKEND_EXTERNAL_URL}
 EOF
 copy_file "$TMPDIR/backend.env" "$BACKEND_SSH_PORT" "${DEPLOY_PATH}/.env"
-remote_cmd "$BACKEND_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose -f config/compose_vms/vm_servers/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm_servers/docker_compose.yml up -d --build"
+remote_cmd "$BACKEND_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose --env-file .env -f config/compose_vms/vm_servers/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm_servers/docker_compose.yml up -d --build"
 wait_remote_http "$BACKEND_SSH_PORT" "http://127.0.0.1:8080/health"
 wait_remote_http "$BACKEND_SSH_PORT" "http://127.0.0.1:8080/health/verifier"
 
@@ -231,7 +231,7 @@ window.SSI_CONFIG = {
 };
 EOF
 copy_file "$TMPDIR/frontend.variables.js" "$FRONTEND_SSH_PORT" "${DEPLOY_PATH}/frontend/frontend.variables.js"
-remote_cmd "$FRONTEND_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose -f config/compose_vms/vm-frontend/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm-frontend/docker_compose.yml up -d --build"
+remote_cmd "$FRONTEND_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose --env-file .env -f config/compose_vms/vm-frontend/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm-frontend/docker_compose.yml up -d --build"
 wait_remote_http "$FRONTEND_SSH_PORT" "http://127.0.0.1:8080/frontend_portal.html"
 
 echo "[deploy-vms] Deployment completed successfully."
