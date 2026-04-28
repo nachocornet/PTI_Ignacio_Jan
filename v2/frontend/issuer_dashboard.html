@@ -3,73 +3,139 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSI v2 Issuer Dashboard</title>
+  <title>SSI v2 | Panel del Emisor</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="frontend.variables.js"></script>
   <style>
-    body { font-family: sans-serif; background: #f5f7f6; color: #1f2933; margin: 0; padding: 20px; }
-    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
-    .card { background: #fff; border: 1px solid #d7e2de; border-radius: 12px; padding: 16px; }
-    h1, h2 { margin: 0 0 10px; }
-    .row { display: grid; gap: 8px; margin-bottom: 10px; }
-    label { font-size: 0.9rem; color: #4f5f6b; }
-    input, textarea, button { font-size: 0.95rem; }
-    input, textarea { width: 100%; border: 1px solid #c8d5d1; border-radius: 8px; padding: 10px; }
-    textarea { min-height: 110px; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    button { border: 0; border-radius: 8px; padding: 10px 12px; cursor: pointer; background: #0f766e; color: #fff; }
-    button.alt { background: #ea580c; }
-    pre { background: #f6faf9; border: 1px solid #dce7e3; border-radius: 8px; padding: 10px; white-space: pre-wrap; }
-    .top-links a { margin-right: 8px; color: #155e75; text-decoration: none; font-weight: 700; }
+    :root {
+      --primary: #0f766e;
+      --primary-light: #f0fdfa;
+      --secondary: #1e293b;
+      --accent: #0284c7;
+      --accent-light: #f0f9ff;
+      --danger: #e11d48;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #334155;
+    }
+
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; line-height: 1.5; }
+    .wrap { max-width: 900px; margin: 0 auto; display: grid; gap: 20px; }
+    
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    
+    .nav-card { display: flex; gap: 15px; padding: 12px 24px; }
+    .nav-card a { text-decoration: none; color: var(--accent); font-weight: 600; font-size: 0.9rem; transition: color 0.2s; }
+    .nav-card a:hover { color: var(--primary); }
+
+    h1 { margin: 0 0 8px; font-size: 1.8rem; color: var(--secondary); }
+    h2 { margin: 0 0 16px; font-size: 1.25rem; color: var(--secondary); display: flex; align-items: center; gap: 8px; }
+    p { margin: 0 0 20px; font-size: 0.95rem; color: #64748b; }
+
+    .step-box { padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid transparent; }
+    .step-identity { background: #ecfdf5; border-color: #a7f3d0; }
+    .step-wallet { background: var(--accent-light); border-color: #bae6fd; }
+
+    .row { margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    
+    input, textarea { 
+      width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px; 
+      font-size: 0.95rem; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
+
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+    
+    button { 
+      border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; 
+      font-weight: 600; font-size: 0.9rem; transition: transform 0.1s, opacity 0.2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    button:active { transform: scale(0.98); }
+    button:hover { opacity: 0.9; }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-accent { background: var(--accent); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
+
+    .status-badge { font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; }
+    .status-off { background: #fee2e2; color: #991b1b; }
+    .status-on { background: #dcfce7; color: #166534; }
+
+    pre { 
+      background: #1e293b; color: #f8fafc; border-radius: 12px; padding: 20px; 
+      font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; margin: 0;
+    }
+    .badge-icon { font-style: normal; }
   </style>
 </head>
 <body>
+
   <div class="wrap">
-    <div class="card top-links">
-      <a href="/frontend_portal.html">Portal</a>
-      <a href="/verifier_dashboard.html">Verifier</a>
+    <div class="card nav-card">
+      <a href="/frontend_portal.html">🏠 Inicio</a>
+      <a href="/verifier">🏢 Verificador</a>
     </div>
+
+    <div class="card step-box step-identity">
+      <h2><i class="badge-icon">✨</i> Paso 0: Crea tu Identidad Digital</h2>
+      <p>Si no tienes una cartera, genera una ahora. Se descargará un archivo que contiene tus llaves secretas.</p>
+      <button class="btn-primary" style="background: #059669;" onclick="generarNuevaIdentidad()">
+        🆕 Generar nueva Wallet
+      </button>
+    </div>
+
     <div class="card">
       <h1>Issuer Dashboard</h1>
+      <p>Módulo oficial de emisión de credenciales de identidad.</p>
 
-      <div style="margin-bottom: 20px; padding: 15px; background: #e0f2fe; border-radius: 8px; border: 1px solid #bae6fd;">
-        <h4 style="margin-top: 0; color: #0369a1;">🔑 1. Identifícate (Como Ciudadano)</h4>
-        <p style="font-size: 13px; color: #0284c7; margin-bottom: 10px;">Sube tu archivo wallet.json para que el Gobierno sepa a quién emitirle el DNI.</p>
-        <input type="file" id="walletInput" accept=".json" style="margin-bottom: 10px; background: white;">
-        <button onclick="cargarWalletManual()" style="background-color: #0284c7; color: white;">Cargar mi Wallet</button>
-        <span id="walletStatus" style="margin-left: 10px; font-weight: bold; color: #555;">Estado: ❌ No cargada</span>
+      <div class="step-box step-wallet">
+        <h2><i class="badge-icon">🔑</i> Paso 1: Cargar Cartera</h2>
+        <p>Carga tu identidad para que el sistema asocie el DNI a tu dirección única (DID).</p>
+        <div class="row">
+          <input type="file" id="walletInput" accept=".json" style="background: white;">
+        </div>
+        <div class="actions">
+          <button class="btn-accent" onclick="cargarWalletManual()">Identificarse</button>
+          <span id="walletStatus" class="status-badge status-off">🔴 No identificado</span>
+        </div>
       </div>
+
+      <h2><i class="badge-icon">📝</i> Paso 2: Datos del Ciudadano</h2>
       <div class="row">
-        <label for="api-base-url">API Base URL</label>
+        <label for="api-base-url">API Endpoint</label>
         <input id="api-base-url" />
       </div>
       <div class="row">
-        <label for="dni">DNI</label>
+        <label for="dni">Número de DNI</label>
         <input id="dni" value="12345678A" />
       </div>
       <div class="row">
-        <label for="holder-did">DID Holder (Se rellenará solo al cargar la wallet)</label>
-        <input id="holder-did" placeholder="did:ethr:0x..." />
+        <label for="holder-did">DID del Titular (Se autocompleta)</label>
+        <input id="holder-did" placeholder="Carga tu wallet o pega tu did:ethr:..." />
       </div>
       <div class="actions">
-        <button id="btn-issue">Emitir VC</button>
-        <button id="btn-download" style="display:none; background:#008CBA;">📥 Descargar mi DNI</button>
+        <button id="btn-issue" class="btn-primary">Emitir Credencial</button>
+        <button id="btn-download" class="btn-accent" style="display:none;">📥 Descargar DNI Digital</button>
       </div>
-      <h2 style="margin-top:14px;">Revocación</h2>
+
+      <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0;">
+      <h2><i class="badge-icon">🚫</i> Revocación de Seguridad</h2>
       <div class="row">
-        <label for="credential-hash">Credential Hash</label>
+        <label for="credential-hash">Hash de la Credencial</label>
         <input id="credential-hash" placeholder="0x..." />
       </div>
-      <div class="row">
-        <label for="reason">Reason</label>
-        <input id="reason" value="revocada desde issuer dashboard" />
-      </div>
       <div class="actions">
-        <button id="btn-revoke" class="alt">Revocar VC</button>
+        <button id="btn-revoke" class="btn-danger">Revocar permanentemente</button>
       </div>
     </div>
+
     <div class="card">
-      <h2>Salida</h2>
-      <pre id="output">Sin operaciones.</pre>
+      <h2><i class="badge-icon">📡</i> Registro de Actividad</h2>
+      <pre id="output">Esperando instrucciones...</pre>
     </div>
   </div>
 
@@ -80,86 +146,108 @@
     const dni = document.getElementById('dni');
     const holderDid = document.getElementById('holder-did');
     const hash = document.getElementById('credential-hash');
-    const reason = document.getElementById('reason');
     const out = document.getElementById('output');
 
     apiBase.value = apiBaseUrl;
+    let carnetGenerado = null; 
 
     function setOut(text) { out.textContent = text; }
 
-    // --- FUNCIÓN PARA CARGAR LA WALLET ---
+    // --- PASO 0: GENERAR WALLET ---
+    function generarNuevaIdentidad() {
+      const wallet = ethers.Wallet.createRandom();
+      const walletData = {
+        private_key: wallet.privateKey,
+        address: wallet.address,
+        did: `did:ethr:sepolia:${wallet.address}`
+      };
+      
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(walletData, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = "mi_cartera_ssi.json";
+      a.click();
+      alert("¡Éxito! Se ha descargado tu nueva identidad: mi_cartera_ssi.json");
+    }
+
+    // --- PASO 1: CARGAR WALLET ---
     function cargarWalletManual() {
       const file = document.getElementById('walletInput').files[0];
-      if (!file) return alert("Por favor, selecciona tu archivo wallet.json primero.");
+      if (!file) return alert("Selecciona tu archivo .json");
       
       const reader = new FileReader();
       reader.onload = function(e) {
           try {
-              const walletData = JSON.parse(e.target.result);
-              document.getElementById('holder-did').value = walletData.did;
-              document.getElementById('walletStatus').innerText = "Estado: ✅ Cargada";
-              alert("¡Wallet cargada! Tu DID se ha rellenado automáticamente.");
+              const data = JSON.parse(e.target.result);
+              holderDid.value = data.did;
+              const status = document.getElementById('walletStatus');
+              status.innerText = "✅ Identificado";
+              status.className = "status-badge status-on";
+              setOut(`Wallet cargada.\nDID: ${data.did}`);
           } catch (err) {
-              alert("Error: El archivo no es un JSON válido.");
+              alert("Archivo inválido");
           }
       };
       reader.readAsText(file);
     }
-    // ------------------------------------
 
-    let carnetGenerado = null; 
-
+    // --- PASO 2: EMITIR ---
     async function issue() {
       try {
+        setOut("Emitiendo en Blockchain... Por favor, espera.");
         const payload = { did_ciudadano: holderDid.value.trim(), numero_dni: dni.value.trim() };
         const r = await fetch(`${apiBase.value.replace(/\/$/, '')}/api/credentials/issue_dni`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
         const body = await r.json();
-        if (!r.ok) throw new Error(body.detail || 'Error emitiendo');
-        hash.value = body.credential?.credentialHash || '';
+        if (!r.ok) throw new Error(body.detail || 'Error en el servidor');
         
+        hash.value = body.credential?.credentialHash || '';
         carnetGenerado = body.credential;
-        document.getElementById('btn-download').style.display = 'inline-block';
+        document.getElementById('btn-download').style.display = 'inline-flex';
 
         setOut([
-          'VC emitida OK',
-          `Holder: ${body.credential?.credentialSubject?.id}`,
+          '✅ CREDENCIAL EMITIDA CON ÉXITO',
+          '--------------------------------',
+          `Titular: ${body.credential?.credentialSubject?.id}`,
           `Hash: ${body.credential?.credentialHash}`,
-          `Tx DID: ${body.onchain?.didStatusTx?.txHash || 'n/d'}`,
-          `Tx Register: ${body.onchain?.registerCredentialTx?.txHash || 'n/d'}`,
+          `Blockchain Tx: ${body.onchain?.registerCredentialTx?.txHash || 'Confirmada'}`,
           '',
-          '¡Haz clic en "Descargar mi DNI" para guardarlo!'
+          'Ahora puedes descargar el archivo para usarlo en el Verificador.'
         ].join('\n'));
       } catch (e) {
-        setOut(`Error issue: ${e.message}`);
+        setOut(`❌ Error: ${e.message}`);
       }
     }
 
+    // --- DESCARGAR CON NOMBRE PERSONALIZADO ---
     document.getElementById('btn-download').addEventListener('click', () => {
       if (!carnetGenerado) return;
+      
+      // Pedimos el nombre al usuario
+      let nombreArchivo = prompt("¿Cómo quieres llamar a tu carnet?", "mi_dni_digital");
+      if (!nombreArchivo) return; // Si cancela, no hacemos nada
+      
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(carnetGenerado, null, 2));
       const a = document.createElement('a');
       a.href = dataStr;
-      a.download = "mi_dni_digital.json";
+      a.download = nombreArchivo + ".json";
       a.click();
     });
 
+    // --- REVOCAR ---
     async function revoke() {
+      if (!confirm("¿Seguro que quieres invalidar esta credencial?")) return;
       try {
-        const payload = { credential_hash: hash.value.trim(), reason: reason.value.trim() };
+        const payload = { credential_hash: hash.value.trim(), reason: "Revocación de seguridad" };
         const r = await fetch(`${apiBase.value.replace(/\/$/, '')}/api/credentials/revoke`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
         const body = await r.json();
-        if (!r.ok) throw new Error(body.detail || 'Error revocando');
-        setOut([
-          'VC revocada OK',
-          `Hash: ${body.credential_hash}`,
-          `Tx revoke: ${body.tx?.txHash || 'n/d'}`
-        ].join('\n'));
+        if (!r.ok) throw new Error(body.detail || 'Error');
+        setOut(`🚫 Credencial revocada on-chain.\nHash: ${body.credential_hash}`);
       } catch (e) {
-        setOut(`Error revoke: ${e.message}`);
+        setOut(`❌ Error: ${e.message}`);
       }
     }
 
