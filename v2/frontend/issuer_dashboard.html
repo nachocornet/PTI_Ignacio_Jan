@@ -30,6 +30,14 @@
     </div>
     <div class="card">
       <h1>Issuer Dashboard</h1>
+
+      <div style="margin-bottom: 20px; padding: 15px; background: #e0f2fe; border-radius: 8px; border: 1px solid #bae6fd;">
+        <h4 style="margin-top: 0; color: #0369a1;">🔑 1. Identifícate (Como Ciudadano)</h4>
+        <p style="font-size: 13px; color: #0284c7; margin-bottom: 10px;">Sube tu archivo wallet.json para que el Gobierno sepa a quién emitirle el DNI.</p>
+        <input type="file" id="walletInput" accept=".json" style="margin-bottom: 10px; background: white;">
+        <button onclick="cargarWalletManual()" style="background-color: #0284c7; color: white;">Cargar mi Wallet</button>
+        <span id="walletStatus" style="margin-left: 10px; font-weight: bold; color: #555;">Estado: ❌ No cargada</span>
+      </div>
       <div class="row">
         <label for="api-base-url">API Base URL</label>
         <input id="api-base-url" />
@@ -39,11 +47,12 @@
         <input id="dni" value="12345678A" />
       </div>
       <div class="row">
-        <label for="holder-did">DID Holder</label>
+        <label for="holder-did">DID Holder (Se rellenará solo al cargar la wallet)</label>
         <input id="holder-did" placeholder="did:ethr:0x..." />
       </div>
       <div class="actions">
         <button id="btn-issue">Emitir VC</button>
+        <button id="btn-download" style="display:none; background:#008CBA;">📥 Descargar mi DNI</button>
       </div>
       <h2 style="margin-top:14px;">Revocación</h2>
       <div class="row">
@@ -63,6 +72,7 @@
       <pre id="output">Sin operaciones.</pre>
     </div>
   </div>
+
   <script>
     const config = window.SSI_CONFIG || {};
     const apiBaseUrl = (config.urls?.issuerApiBaseUrl || config.urls?.apiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
@@ -77,6 +87,28 @@
 
     function setOut(text) { out.textContent = text; }
 
+    // --- FUNCIÓN PARA CARGAR LA WALLET ---
+    function cargarWalletManual() {
+      const file = document.getElementById('walletInput').files[0];
+      if (!file) return alert("Por favor, selecciona tu archivo wallet.json primero.");
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+          try {
+              const walletData = JSON.parse(e.target.result);
+              document.getElementById('holder-did').value = walletData.did;
+              document.getElementById('walletStatus').innerText = "Estado: ✅ Cargada";
+              alert("¡Wallet cargada! Tu DID se ha rellenado automáticamente.");
+          } catch (err) {
+              alert("Error: El archivo no es un JSON válido.");
+          }
+      };
+      reader.readAsText(file);
+    }
+    // ------------------------------------
+
+    let carnetGenerado = null; 
+
     async function issue() {
       try {
         const payload = { did_ciudadano: holderDid.value.trim(), numero_dni: dni.value.trim() };
@@ -86,6 +118,10 @@
         const body = await r.json();
         if (!r.ok) throw new Error(body.detail || 'Error emitiendo');
         hash.value = body.credential?.credentialHash || '';
+        
+        carnetGenerado = body.credential;
+        document.getElementById('btn-download').style.display = 'inline-block';
+
         setOut([
           'VC emitida OK',
           `Holder: ${body.credential?.credentialSubject?.id}`,
@@ -93,13 +129,21 @@
           `Tx DID: ${body.onchain?.didStatusTx?.txHash || 'n/d'}`,
           `Tx Register: ${body.onchain?.registerCredentialTx?.txHash || 'n/d'}`,
           '',
-          'Copia este JSON para Holder:',
-          JSON.stringify(body.credential, null, 2)
+          '¡Haz clic en "Descargar mi DNI" para guardarlo!'
         ].join('\n'));
       } catch (e) {
         setOut(`Error issue: ${e.message}`);
       }
     }
+
+    document.getElementById('btn-download').addEventListener('click', () => {
+      if (!carnetGenerado) return;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(carnetGenerado, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = "mi_dni_digital.json";
+      a.click();
+    });
 
     async function revoke() {
       try {
