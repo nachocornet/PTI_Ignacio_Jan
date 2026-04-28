@@ -20,6 +20,7 @@ BACKEND_SSH_PORT="${BACKEND_SSH_PORT:-40571}"
 DB_SSH_PORT="${DB_SSH_PORT:-40581}"
 DEPLOY_PATH="${DEPLOY_PATH:-/home/alumne/pti-v2}"
 DB_PASSWORD="${DB_PASSWORD:-${POSTGRES_PASSWORD:-}}"
+DB_RESET_ON_AUTH_FAIL="${DB_RESET_ON_AUTH_FAIL:-1}"
 
 POSTGRES_USER="${POSTGRES_USER:-ssi_user}"
 POSTGRES_DB="${POSTGRES_DB:-ssi_db}"
@@ -178,6 +179,16 @@ else:
 PY"
 }
 
+verify_remote_db_auth() {
+  local port="$1"
+  remote_cmd "$port" "docker exec ssi_postgres sh -lc \"PGPASSWORD='${DB_PASSWORD}' psql -h 127.0.0.1 -U '${POSTGRES_USER}' -d '${POSTGRES_DB}' -c 'select 1;' >/dev/null\""
+}
+
+sync_remote_db_password() {
+  local port="$1"
+  remote_cmd "$port" "docker exec ssi_postgres sh -lc \"psql -v ON_ERROR_STOP=1 -U '${POSTGRES_USER}' -d '${POSTGRES_DB}' -c \\\"ALTER USER \\\\\\\"${POSTGRES_USER}\\\\\\\" WITH PASSWORD '${DB_PASSWORD}';\\\"\""
+}
+
 echo "[deploy-vms] Syncing repository to DB VM..."
 remote_cmd "$DB_SSH_PORT" "mkdir -p '${DEPLOY_PATH}' '${DEPLOY_PATH}/deployments/runtime'"
 ensure_remote_docker "$DB_SSH_PORT"
@@ -190,6 +201,20 @@ EOF
 copy_file "$TMPDIR/db.env" "$DB_SSH_PORT" "${DEPLOY_PATH}/.env"
 remote_cmd "$DB_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml up -d --build"
 wait_remote_tcp "$DB_SSH_PORT" "127.0.0.1" "5432"
+sync_remote_db_password "$DB_SSH_PORT"
+if ! verify_remote_db_auth "$DB_SSH_PORT"; then
+  if [[ "$DB_RESET_ON_AUTH_FAIL" == "1" ]]; then
+    echo "[deploy-vms] DB auth mismatch detected (likely stale postgres volume). Recreating DB volume..."
+    remote_cmd "$DB_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml down -v --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml up -d --build"
+    wait_remote_tcp "$DB_SSH_PORT" "127.0.0.1" "5432"
+    verify_remote_db_auth "$DB_SSH_PORT"
+  else
+    echo "[deploy-vms] DB auth mismatch detected and DB_RESET_ON_AUTH_FAIL=0."
+    echo "[deploy-vms] Run with DB_RESET_ON_AUTH_FAIL=1 or recreate DB volume manually:"
+    echo "[deploy-vms] docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml down -v && docker compose --env-file .env -f config/compose_vms/vm_db/docker_compose.yml up -d --build"
+    exit 1
+  fi
+fi
 
 echo "[deploy-vms] Syncing repository to Backend VM..."
 remote_cmd "$BACKEND_SSH_PORT" "mkdir -p '${DEPLOY_PATH}' '${DEPLOY_PATH}/deployments/runtime'"
@@ -208,6 +233,7 @@ SSI_CORS_ORIGINS=${FRONTEND_EXTERNAL_URL},${BACKEND_EXTERNAL_URL}
 EOF
 copy_file "$TMPDIR/backend.env" "$BACKEND_SSH_PORT" "${DEPLOY_PATH}/.env"
 remote_cmd "$BACKEND_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose --env-file .env -f config/compose_vms/vm_servers/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm_servers/docker_compose.yml up -d --build"
+remote_cmd "$BACKEND_SSH_PORT" "docker exec ssi_issuer python /app/scripts/seed_db.py"
 wait_remote_http "$BACKEND_SSH_PORT" "http://127.0.0.1:8080/health"
 wait_remote_http "$BACKEND_SSH_PORT" "http://127.0.0.1:8080/health/verifier"
 

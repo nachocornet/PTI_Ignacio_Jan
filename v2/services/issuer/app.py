@@ -24,13 +24,18 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 def _get_cors_origins() -> list[str]:
-    return SETTINGS.cors_origins
+    origins = SETTINGS.cors_origins
+    return origins if origins else ["*"]
+
+
+cors_origins = _get_cors_origins()
+allow_credentials = "*" not in cors_origins
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_get_cors_origins(),
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
