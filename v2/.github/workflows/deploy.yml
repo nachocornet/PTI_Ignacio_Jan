@@ -1,0 +1,282 @@
+name: Deploy SSI v2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose-local.yml'
+      - 'frontend/**'
+      - 'services/**'
+      - 'shared/**'
+      - 'db/**'
+      - 'config/compose_vms/**'
+      - 'deployments/**'
+      - '.github/workflows/deploy.yml'
+      - 'README.md'
+      - 'docs/**'
+      - 'scripts/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ssi-v2-deploy
+  cancel-in-progress: false
+
+env:
+  NATTECH_HOST: nattech.fib.upc.edu
+  SSH_USER: alumne
+  DEPLOY_PATH: /home/alumne/pti-v2
+  FRONTEND_SSH_PORT: '40561'
+  BACKEND_SSH_PORT: '40571'
+  DB_SSH_PORT: '40581'
+  FRONTEND_EXTERNAL_URL: http://nattech.fib.upc.edu:40560
+  BACKEND_EXTERNAL_URL: http://nattech.fib.upc.edu:40570
+  POSTGRES_USER: ssi_user
+  POSTGRES_DB: ssi_db
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r config/requirements.txt
+
+      - name: Run tests
+        run: |
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
+
+  deploy_db:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Configure known hosts
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Sync repo to DB VM
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -p ${DB_SSH_PORT} -o BatchMode=yes" \
+            --exclude '.git/' \
+            --exclude '.venv/' \
+            --exclude '__pycache__/' \
+            --exclude '.pytest_cache/' \
+            --exclude 'node_modules/' \
+            --exclude 'config/node_modules/' \
+            --exclude 'deployments/runtime/' \
+            --exclude '*.pyc' \
+            ./ "${SSH_USER}@${NATTECH_HOST}:${DEPLOY_PATH}/"
+
+      - name: Write DB env file
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/db.env" <<EOF
+          POSTGRES_USER=${POSTGRES_USER}
+          POSTGRES_DB=${POSTGRES_DB}
+          POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+          EOF
+          rsync -az -e "ssh -p ${DB_SSH_PORT} -o BatchMode=yes" \
+            "$RUNNER_TEMP/db.env" "${SSH_USER}@${NATTECH_HOST}:${DEPLOY_PATH}/.env"
+
+      - name: Deploy DB stack
+        run: |
+          set -euo pipefail
+          ssh -p ${DB_SSH_PORT} -o BatchMode=yes "${SSH_USER}@${NATTECH_HOST}" \
+            "cd ${DEPLOY_PATH} && docker compose -f config/compose_vms/vm_db/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm_db/docker_compose.yml up -d --build"
+
+      - name: Wait for DB to be ready
+        run: |
+          set -euo pipefail
+          ssh -p ${DB_SSH_PORT} -o BatchMode=yes "${SSH_USER}@${NATTECH_HOST}" \
+            "python3 - <<'PY'
+import socket
+import time
+
+for _ in range(30):
+    try:
+        sock = socket.create_connection(('127.0.0.1', 5432), timeout=3)
+        sock.close()
+        print('DB ready')
+        break
+    except OSError:
+        time.sleep(2)
+else:
+    raise SystemExit('DB did not become ready')
+PY"
+
+  deploy_backend:
+    needs: deploy_db
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Configure known hosts
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Sync repo to backend VM
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -p ${BACKEND_SSH_PORT} -o BatchMode=yes" \
+            --exclude '.git/' \
+            --exclude '.venv/' \
+            --exclude '__pycache__/' \
+            --exclude '.pytest_cache/' \
+            --exclude 'node_modules/' \
+            --exclude 'config/node_modules/' \
+            --exclude 'deployments/runtime/' \
+            --exclude '*.pyc' \
+            ./ "${SSH_USER}@${NATTECH_HOST}:${DEPLOY_PATH}/"
+
+      - name: Write issuer wallet secret
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/runtime"
+          printf '%s' "${{ secrets.ISSUER_WALLET_JSON_B64 }}" | base64 -d > "$RUNNER_TEMP/runtime/issuer_wallet.json"
+          rsync -az -e "ssh -p ${BACKEND_SSH_PORT} -o BatchMode=yes" \
+            "$RUNNER_TEMP/runtime/issuer_wallet.json" \
+            "${SSH_USER}@${NATTECH_HOST}:${DEPLOY_PATH}/deployments/runtime/issuer_wallet.json"
+
+      - name: Write backend env file
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/backend.env" <<EOF
+          DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER}:${{ secrets.DB_PASSWORD }}@172.16.4.58:5432/${POSTGRES_DB}
+          SSI_BLOCKCHAIN_NETWORK=sepolia
+          SEPOLIA_RPC_URL=${{ secrets.SEPOLIA_RPC_URL }}
+          SSI_CONTRACT_FILE=deployments/blockchain_contract.sepolia.json
+          SSI_ISSUER_WALLET_FILE=deployments/runtime/issuer_wallet.json
+          SSI_HOLDER_WALLET_FILE=deployments/runtime/wallet.json
+          SSI_CORS_ORIGINS=${FRONTEND_EXTERNAL_URL},${BACKEND_EXTERNAL_URL}
+          EOF
+          rsync -az -e "ssh -p ${BACKEND_SSH_PORT} -o BatchMode=yes" \
+            "$RUNNER_TEMP/backend.env" "${SSH_USER}@${NATTECH_HOST}:${DEPLOY_PATH}/.env"
+
+      - name: Deploy backend stack
+        run: |
+          set -euo pipefail
+          ssh -p ${BACKEND_SSH_PORT} -o BatchMode=yes "${SSH_USER}@${NATTECH_HOST}" \
+            "cd ${DEPLOY_PATH} && docker compose -f config/compose_vms/vm_servers/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm_servers/docker_compose.yml up -d --build"
+
+      - name: Wait for backend health
+        run: |
+          set -euo pipefail
+          ssh -p ${BACKEND_SSH_PORT} -o BatchMode=yes "${SSH_USER}@${NATTECH_HOST}" \
+            "python3 - <<'PY'
+import urllib.request
+import time
+
+for path in ('http://127.0.0.1:8080/health', 'http://127.0.0.1:8080/health/verifier'):
+    for _ in range(30):
+        try:
+            urllib.request.urlopen(path, timeout=3).read()
+            break
+        except Exception:
+            time.sleep(2)
+    else:
+        raise SystemExit(f'Backend health check failed: {path}')
+print('Backend ready')
+PY"
+
+  deploy_frontend:
+    needs: deploy_backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Configure known hosts
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Sync repo to frontend VM
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -p ${FRONTEND_SSH_PORT} -o BatchMode=yes" \
+            --exclude '.git/' \
+            --exclude '.venv/' \
+            --exclude '__pycache__/' \
+            --exclude '.pytest_cache/' \
+            --exclude 'node_modules/' \
+            --exclude 'config/node_modules/' \
+            --exclude 'deployments/runtime/' \
+            --exclude '*.pyc' \
+            ./ "${SSH_USER}@${NATTECH_HOST}:${DEPLOY_PATH}/"
+
+      - name: Write frontend runtime config
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/frontend.variables.js" <<EOF
+          window.SSI_CONFIG = {
+            "appTitle": "SSI v2 Frontend",
+            "appSubtitle": "Dashboard web para issuer y verifier",
+            "urls": {
+              "issuerApiBaseUrl": "${BACKEND_EXTERNAL_URL}",
+              "verifierApiBaseUrl": "${BACKEND_EXTERNAL_URL}",
+              "apiBaseUrl": "${BACKEND_EXTERNAL_URL}"
+            },
+            "defaults": {
+              "dni": "12345678A",
+              "refreshMs": 15000
+            }
+          };
+          EOF
+          rsync -az -e "ssh -p ${FRONTEND_SSH_PORT} -o BatchMode=yes" \
+            "$RUNNER_TEMP/frontend.variables.js" "${SSH_USER}@${NATTECH_HOST}:${DEPLOY_PATH}/frontend/frontend.variables.js"
+
+      - name: Deploy frontend stack
+        run: |
+          set -euo pipefail
+          ssh -p ${FRONTEND_SSH_PORT} -o BatchMode=yes "${SSH_USER}@${NATTECH_HOST}" \
+            "cd ${DEPLOY_PATH} && docker compose -f config/compose_vms/vm-frontend/docker_compose.yml down --remove-orphans || true && docker compose -f config/compose_vms/vm-frontend/docker_compose.yml up -d --build"
+
+      - name: Smoke test public URLs
+        run: |
+          set -euo pipefail
+          curl -fsS "${FRONTEND_EXTERNAL_URL}/frontend_portal.html" >/dev/null
+          curl -fsS "${FRONTEND_EXTERNAL_URL}/issuer_dashboard.html" >/dev/null
+          curl -fsS "${FRONTEND_EXTERNAL_URL}/verifier_dashboard.html" >/dev/null
+          curl -fsS "${BACKEND_EXTERNAL_URL}/health" >/dev/null
+          curl -fsS "${BACKEND_EXTERNAL_URL}/health/verifier" >/dev/null

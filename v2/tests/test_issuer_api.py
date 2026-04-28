@@ -6,8 +6,8 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 import json
 
-import issuer
-import models
+from services.issuer import app as issuer
+from db import models
 
 
 class FakeBlockchainClient:

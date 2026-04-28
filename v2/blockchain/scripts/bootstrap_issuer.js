@@ -10,14 +10,15 @@ function didToAddress(did) {
 }
 
 async function main() {
-  const deploymentFile = path.resolve(__dirname, "..", "deployments", "local", "ssi_registry.json");
-  const issuerWalletFile = path.resolve(__dirname, "..", "..", "issuer_wallet.json");
+  const networkName = hre.network.name;
+  const deploymentFile = path.resolve(__dirname, "..", "deployments", networkName, "ssi_registry.json");
+  const issuerWalletFile = path.resolve(__dirname, "..", "..", "deployments", "runtime", "issuer_wallet.json");
 
   if (!fs.existsSync(deploymentFile)) {
     throw new Error("Deployment metadata not found. Run deploy_registry.js first.");
   }
   if (!fs.existsSync(issuerWalletFile)) {
-    throw new Error("issuer_wallet.json not found at project root.");
+    throw new Error("deployments/runtime/issuer_wallet.json not found.");
   }
 
   const deployment = JSON.parse(fs.readFileSync(deploymentFile, "utf-8"));
@@ -46,7 +47,7 @@ async function main() {
   };
 
   fs.writeFileSync(
-    path.resolve(__dirname, "..", "deployments", "local", "bootstrap_issuer.json"),
+    path.resolve(__dirname, "..", "deployments", networkName, "bootstrap_issuer.json"),
     JSON.stringify(output, null, 2)
   );
 

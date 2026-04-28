@@ -43,6 +43,46 @@ Esto genera:
 - `blockchain/artifacts_export/ssi_registry_abi.json`
 - `blockchain_contract.json` (puente para Python en la raiz del proyecto)
 
+## 4b) Desplegar contrato en Sepolia
+
+Antes de desplegar a testnet necesitas:
+
+1. Crear un wallet de despliegue:
+
+```bash
+cd v2
+node blockchain/scripts/generate_testnet_wallet.js
+```
+
+2. Fondear el address mostrado con un faucet de Sepolia.
+
+3. Exportar variables de entorno:
+
+```bash
+export SSI_BLOCKCHAIN_NETWORK=sepolia
+export SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/TU_PROJECT_ID
+export SEPOLIA_DEPLOYER_PRIVATE_KEY=0x...
+```
+
+4. Compilar y desplegar:
+
+```bash
+cd blockchain
+npm run compile
+npm run deploy:testnet
+npm run bootstrap:testnet
+```
+
+Esto genera:
+
+- `blockchain/deployments/sepolia/ssi_registry.json`
+- `blockchain/deployments/sepolia/bootstrap_issuer.json`
+- `blockchain_contract.sepolia.json`
+
+El archivo `blockchain_contract.json` tambien se actualiza como puente activo para el cliente Python.
+
+Guía rápida completa: [TESTNET_QUICKSTART.md](../docs/tutoriales/TESTNET_QUICKSTART.md)
+
 ## 5) Bootstrap del Issuer
 
 ```bash

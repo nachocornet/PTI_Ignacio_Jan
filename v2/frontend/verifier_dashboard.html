@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSI v2 Verifier Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="frontend.variables.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f5f7f6; color: #1f2933; margin: 0; padding: 20px; }
+    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
+    .card { background: #fff; border: 1px solid #d7e2de; border-radius: 12px; padding: 16px; }
+    h1, h2 { margin: 0 0 10px; }
+    .row { display: grid; gap: 8px; margin-bottom: 10px; }
+    label { font-size: 0.9rem; color: #4f5f6b; }
+    input, textarea, button { font-size: 0.95rem; }
+    input, textarea { width: 100%; border: 1px solid #c8d5d1; border-radius: 8px; padding: 10px; }
+    textarea { min-height: 120px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { border: 0; border-radius: 8px; padding: 10px 12px; cursor: pointer; background: #155e75; color: #fff; }
+    button.alt { background: #0f766e; }
+    pre { background: #f6faf9; border: 1px solid #dce7e3; border-radius: 8px; padding: 10px; white-space: pre-wrap; }
+    .top-links a { margin-right: 8px; color: #155e75; text-decoration: none; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card top-links">
+      <a href="/frontend_portal.html">Portal</a>
+      <a href="/issuer_dashboard.html">Issuer</a>
+    </div>
+    <div class="card">
+      <h1>Verifier Dashboard</h1>
+      <div class="row">
+        <label for="api-base-url">API Base URL</label>
+        <input id="api-base-url" />
+      </div>
+      <div class="row">
+        <label for="wallet-file">Wallet Holder (JSON)</label>
+        <input id="wallet-file" type="file" accept="application/json" />
+      </div>
+      <div class="row">
+        <label for="vc-json">VC JSON</label>
+        <textarea id="vc-json" placeholder="Pega aquí la VC emitida por Issuer"></textarea>
+      </div>
+      <div class="actions">
+        <button id="btn-verify" class="alt">Firmar VP y verificar</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Salida</h2>
+      <pre id="output">Sin operaciones.</pre>
+    </div>
+  </div>
+  <script>
+    const config = window.SSI_CONFIG || {};
+    const apiBaseUrl = (config.urls?.verifierApiBaseUrl || config.urls?.apiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
+    const apiBase = document.getElementById('api-base-url');
+    const walletFile = document.getElementById('wallet-file');
+    const vcJson = document.getElementById('vc-json');
+    const out = document.getElementById('output');
+
+    apiBase.value = apiBaseUrl;
+    let wallet = null;
+    let did = null;
+
+    function setOut(text) { out.textContent = text; }
+
+    function canonicalize(v) {
+      if (Array.isArray(v)) return v.map(canonicalize);
+      if (v && typeof v === 'object') {
+        const o = {};
+        Object.keys(v).sort().forEach((k) => { o[k] = canonicalize(v[k]); });
+        return o;
+      }
+      return v;
+    }
+
+    walletFile.addEventListener('change', async (event) => {
+      const f = event.target.files?.[0];
+      if (!f) return;
+      try {
+        const raw = await f.text();
+        const data = JSON.parse(raw);
+        if (!data.private_key || !data.did) throw new Error('wallet invalida');
+        wallet = new ethers.Wallet(data.private_key);
+        did = data.did;
+        setOut(`Wallet cargada OK\nDID: ${did}\nAddress: ${wallet.address}`);
+      } catch (e) {
+        setOut(`Error wallet: ${e.message}`);
+      }
+    });
+
+    async function verify() {
+      try {
+        if (!wallet || !did) throw new Error('Carga primero wallet holder');
+        const vc = JSON.parse(vcJson.value);
+        const vp = {
+          '@context': ['https://www.w3.org/2018/credentials/v1'],
+          type: ['VerifiablePresentation'],
+          verifiableCredential: vc
+        };
+        const canonical = JSON.stringify(canonicalize(vp));
+        const signature = await wallet.signMessage(canonical);
+        vp.proof = {
+          type: 'EcdsaSecp256k1RecoverySignature2020',
+          proofPurpose: 'authentication',
+          verificationMethod: did,
+          proofValue: signature
+        };
+
+        const r = await fetch(`${apiBase.value.replace(/\/$/, '')}/api/verify_presentation`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vp })
+        });
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.detail || 'Error verify');
+
+        setOut([
+          'Verificacion OK',
+          `Issuer autorizado: ${body.onchain?.issuerAuthorized}`,
+          `Holder activo: ${body.onchain?.holderDidActive}`,
+          `Revocada: ${body.onchain?.credentialRevoked}`
+        ].join('\n'));
+      } catch (e) {
+        setOut(`Error verify: ${e.message}`);
+      }
+    }
+
+    document.getElementById('btn-verify').addEventListener('click', verify);
+  </script>
+</body>
+</html>

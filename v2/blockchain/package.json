@@ -9,7 +9,11 @@
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy_registry.js --network localhost",
     "bootstrap:local": "hardhat run scripts/bootstrap_issuer.js --network localhost",
-    "full:local": "npm run compile && npm run deploy:local && npm run bootstrap:local"
+    "full:local": "npm run compile && npm run deploy:local && npm run bootstrap:local",
+    "wallet:testnet": "node scripts/generate_testnet_wallet.js",
+    "deploy:testnet": "hardhat run scripts/deploy_registry.js --network sepolia",
+    "bootstrap:testnet": "hardhat run scripts/bootstrap_issuer.js --network sepolia",
+    "full:testnet": "npm run compile && npm run deploy:testnet && npm run bootstrap:testnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

@@ -19,10 +19,11 @@ async function main() {
   console.log(`[deploy] SSIRegistry=${registryAddress}`);
 
   const artifact = await hre.artifacts.readArtifact("SSIRegistry");
+  const networkName = hre.network.name;
 
   const exportPayload = {
     contractName: "SSIRegistry",
-    network: hre.network.name,
+    network: networkName,
     chainId: Number(hre.network.config.chainId || 0),
     deployedAt: new Date().toISOString(),
     deployer: deployer.address,
@@ -32,15 +33,16 @@ async function main() {
     abi: artifact.abi,
   };
 
-  const localDeploymentDir = path.resolve(__dirname, "..", "deployments", "local");
+  const deploymentDir = path.resolve(__dirname, "..", "deployments", networkName);
   const localArtifactDir = path.resolve(__dirname, "..", "artifacts_export");
-  const rootBridgeFile = path.resolve(__dirname, "..", "..", "blockchain_contract.json");
+  const rootBridgeFile = path.resolve(__dirname, "..", "..", `blockchain_contract.${networkName}.json`);
+  const activeBridgeFile = path.resolve(__dirname, "..", "..", "deployments", "blockchain_contract.json");
 
-  fs.mkdirSync(localDeploymentDir, { recursive: true });
+  fs.mkdirSync(deploymentDir, { recursive: true });
   fs.mkdirSync(localArtifactDir, { recursive: true });
 
   fs.writeFileSync(
-    path.join(localDeploymentDir, "ssi_registry.json"),
+    path.join(deploymentDir, "ssi_registry.json"),
     JSON.stringify(exportPayload, null, 2)
   );
   fs.writeFileSync(
@@ -48,6 +50,7 @@ async function main() {
     JSON.stringify(artifact.abi, null, 2)
   );
   fs.writeFileSync(rootBridgeFile, JSON.stringify(exportPayload, null, 2));
+  fs.writeFileSync(activeBridgeFile, JSON.stringify(exportPayload, null, 2));
 
   console.log("[deploy] exported deployment files");
 }

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSI v2 Issuer Dashboard</title>
+  <script src="frontend.variables.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f5f7f6; color: #1f2933; margin: 0; padding: 20px; }
+    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
+    .card { background: #fff; border: 1px solid #d7e2de; border-radius: 12px; padding: 16px; }
+    h1, h2 { margin: 0 0 10px; }
+    .row { display: grid; gap: 8px; margin-bottom: 10px; }
+    label { font-size: 0.9rem; color: #4f5f6b; }
+    input, textarea, button { font-size: 0.95rem; }
+    input, textarea { width: 100%; border: 1px solid #c8d5d1; border-radius: 8px; padding: 10px; }
+    textarea { min-height: 110px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { border: 0; border-radius: 8px; padding: 10px 12px; cursor: pointer; background: #0f766e; color: #fff; }
+    button.alt { background: #ea580c; }
+    pre { background: #f6faf9; border: 1px solid #dce7e3; border-radius: 8px; padding: 10px; white-space: pre-wrap; }
+    .top-links a { margin-right: 8px; color: #155e75; text-decoration: none; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card top-links">
+      <a href="/frontend_portal.html">Portal</a>
+      <a href="/verifier_dashboard.html">Verifier</a>
+    </div>
+    <div class="card">
+      <h1>Issuer Dashboard</h1>
+      <div class="row">
+        <label for="api-base-url">API Base URL</label>
+        <input id="api-base-url" />
+      </div>
+      <div class="row">
+        <label for="dni">DNI</label>
+        <input id="dni" value="12345678A" />
+      </div>
+      <div class="row">
+        <label for="holder-did">DID Holder</label>
+        <input id="holder-did" placeholder="did:ethr:0x..." />
+      </div>
+      <div class="actions">
+        <button id="btn-issue">Emitir VC</button>
+      </div>
+      <h2 style="margin-top:14px;">Revocación</h2>
+      <div class="row">
+        <label for="credential-hash">Credential Hash</label>
+        <input id="credential-hash" placeholder="0x..." />
+      </div>
+      <div class="row">
+        <label for="reason">Reason</label>
+        <input id="reason" value="revocada desde issuer dashboard" />
+      </div>
+      <div class="actions">
+        <button id="btn-revoke" class="alt">Revocar VC</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Salida</h2>
+      <pre id="output">Sin operaciones.</pre>
+    </div>
+  </div>
+  <script>
+    const config = window.SSI_CONFIG || {};
+    const apiBaseUrl = (config.urls?.issuerApiBaseUrl || config.urls?.apiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
+    const apiBase = document.getElementById('api-base-url');
+    const dni = document.getElementById('dni');
+    const holderDid = document.getElementById('holder-did');
+    const hash = document.getElementById('credential-hash');
+    const reason = document.getElementById('reason');
+    const out = document.getElementById('output');
+
+    apiBase.value = apiBaseUrl;
+
+    function setOut(text) { out.textContent = text; }
+
+    async function issue() {
+      try {
+        const payload = { did_ciudadano: holderDid.value.trim(), numero_dni: dni.value.trim() };
+        const r = await fetch(`${apiBase.value.replace(/\/$/, '')}/api/credentials/issue_dni`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.detail || 'Error emitiendo');
+        hash.value = body.credential?.credentialHash || '';
+        setOut([
+          'VC emitida OK',
+          `Holder: ${body.credential?.credentialSubject?.id}`,
+          `Hash: ${body.credential?.credentialHash}`,
+          `Tx DID: ${body.onchain?.didStatusTx?.txHash || 'n/d'}`,
+          `Tx Register: ${body.onchain?.registerCredentialTx?.txHash || 'n/d'}`,
+          '',
+          'Copia este JSON para Holder:',
+          JSON.stringify(body.credential, null, 2)
+        ].join('\n'));
+      } catch (e) {
+        setOut(`Error issue: ${e.message}`);
+      }
+    }
+
+    async function revoke() {
+      try {
+        const payload = { credential_hash: hash.value.trim(), reason: reason.value.trim() };
+        const r = await fetch(`${apiBase.value.replace(/\/$/, '')}/api/credentials/revoke`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.detail || 'Error revocando');
+        setOut([
+          'VC revocada OK',
+          `Hash: ${body.credential_hash}`,
+          `Tx revoke: ${body.tx?.txHash || 'n/d'}`
+        ].join('\n'));
+      } catch (e) {
+        setOut(`Error revoke: ${e.message}`);
+      }
+    }
+
+    document.getElementById('btn-issue').addEventListener('click', issue);
+    document.getElementById('btn-revoke').addEventListener('click', revoke);
+  </script>
+</body>
+</html>

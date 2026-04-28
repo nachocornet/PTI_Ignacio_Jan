@@ -1,6 +1,6 @@
 import pytest
 
-from blockchain_client import SSIBlockchainClient
+from shared.blockchain_client import SSIBlockchainClient
 
 
 def test_canonical_hash_is_deterministic():

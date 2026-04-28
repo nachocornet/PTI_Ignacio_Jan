@@ -1,13 +1,12 @@
-venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
+.env
 # Local blockchain toolchain
-node_modules/
-package.json
-package-lock.json
+config/node_modules/
 blockchain/node_modules/
 blockchain/cache/
 blockchain/artifacts/
@@ -15,9 +14,12 @@ blockchain/artifacts/
 # Generated deployment outputs
 blockchain/deployments/local/*.json
 blockchain/artifacts_export/*.json
-blockchain_contract.json
+deployments/blockchain_contract.json
+deployments/blockchain_contract.localhost.json
+deployments/blockchain_contract.sepolia.json
 
 # Local secrets and state
-wallet.json
-issuer_wallet.json
-ssi_sessions.db
+deployments/runtime/wallet.json
+deployments/runtime/issuer_wallet.json
+deployments/runtime/sepolia_deployer_wallet.json
+deployments/runtime/ssi_sessions.db

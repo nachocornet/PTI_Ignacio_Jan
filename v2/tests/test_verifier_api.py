@@ -3,7 +3,7 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 import json
 
-import verifier
+from services.verifier import app as verifier
 from conftest import build_signed_vc, build_signed_vp
 
 
