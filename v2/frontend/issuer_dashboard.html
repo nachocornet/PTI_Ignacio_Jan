@@ -159,7 +159,7 @@
       const walletData = {
         private_key: wallet.privateKey,
         address: wallet.address,
-        did: `did:ethr:sepolia:${wallet.address}`
+        did: `did:ethr:${wallet.address}`
       };
       
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(walletData, null, 2));
