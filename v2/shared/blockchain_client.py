@@ -7,6 +7,7 @@ from typing import Any, Dict
 from eth_account import Account
 from eth_utils import keccak
 from web3 import Web3
+from web3.exceptions import TimeExhausted
 from shared.settings import SETTINGS
 
 DID_PATTERN = re.compile(r"^did:ethr:(0x[a-fA-F0-9]{40})$")
@@ -28,7 +29,8 @@ class SSIBlockchainClient:
     ) -> None:
         rpc_url = rpc_url or SETTINGS.blockchain_rpc_url
         contract_file = contract_file or SETTINGS.contract_file
-        self.w3 = Web3(Web3.HTTPProvider(rpc_url))
+        rpc_timeout = int(os.getenv("SSI_RPC_TIMEOUT", "30"))
+        self.w3 = Web3(Web3.HTTPProvider(rpc_url, request_kwargs={"timeout": rpc_timeout}))
         if not self.w3.is_connected():
             raise RuntimeError(f"No se pudo conectar al nodo Ethereum en {rpc_url}")
 
@@ -103,17 +105,24 @@ class SSIBlockchainClient:
     def _send_contract_tx(self, contract_fn: Any, sender_private_key: str = "") -> Dict[str, Any]:
         if sender_private_key:
             account = Account.from_key(sender_private_key)
-            nonce = self.w3.eth.get_transaction_count(account.address)
-            gas_price = self.w3.eth.gas_price
-            tx = contract_fn.build_transaction(
-                {
-                    "from": account.address,
-                    "nonce": nonce,
-                    "chainId": self.w3.eth.chain_id,
-                    "gas": 500000,
-                    "gasPrice": gas_price,
-                }
-            )
+            nonce = self.w3.eth.get_transaction_count(account.address, "pending")
+            tx_params: Dict[str, Any] = {
+                "from": account.address,
+                "nonce": nonce,
+                "chainId": self.w3.eth.chain_id,
+                "gas": 500000,
+            }
+
+            latest_block = self.w3.eth.get_block("latest")
+            base_fee = latest_block.get("baseFeePerGas")
+            if base_fee is not None:
+                max_priority = self.w3.to_wei(2, "gwei")
+                tx_params["maxPriorityFeePerGas"] = max_priority
+                tx_params["maxFeePerGas"] = int(base_fee) * 2 + int(max_priority)
+            else:
+                tx_params["gasPrice"] = self.w3.eth.gas_price
+
+            tx = contract_fn.build_transaction(tx_params)
             signed = self.w3.eth.account.sign_transaction(tx, private_key=sender_private_key)
             tx_hash = self.w3.eth.send_raw_transaction(signed.rawTransaction)
             sender = account.address
@@ -124,7 +133,26 @@ class SSIBlockchainClient:
             sender = Web3.to_checksum_address(accounts[0])
             tx_hash = contract_fn.transact({"from": sender})
 
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        default_wait = "0" if SETTINGS.blockchain_network == "sepolia" else "1"
+        should_wait_receipt = os.getenv("SSI_WAIT_FOR_RECEIPT", default_wait).strip() == "1"
+        if not should_wait_receipt:
+            return {
+                "txHash": tx_hash.hex(),
+                "blockNumber": None,
+                "status": -1,
+                "sender": sender,
+                "gasUsed": None,
+                "pending": True,
+            }
+
+        tx_wait_timeout = int(os.getenv("SSI_TX_RECEIPT_TIMEOUT", "600"))
+        try:
+            receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=tx_wait_timeout, poll_latency=2)
+        except TimeExhausted as exc:
+            raise RuntimeError(
+                f"Transaccion enviada ({tx_hash.hex()}) pero no confirmada en {tx_wait_timeout}s"
+            ) from exc
+
         return {
             "txHash": tx_hash.hex(),
             "blockNumber": int(receipt.blockNumber),

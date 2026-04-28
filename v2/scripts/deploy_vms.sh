@@ -26,6 +26,8 @@ POSTGRES_USER="${POSTGRES_USER:-ssi_user}"
 POSTGRES_DB="${POSTGRES_DB:-ssi_db}"
 FRONTEND_EXTERNAL_URL="${FRONTEND_EXTERNAL_URL:-http://${NATTECH_HOST}:40560}"
 BACKEND_EXTERNAL_URL="${BACKEND_EXTERNAL_URL:-http://${NATTECH_HOST}:40570}"
+SSI_ADMIN_USER="${SSI_ADMIN_USER:-admin}"
+SSI_ADMIN_PASSWORD="${SSI_ADMIN_PASSWORD:-admin123}"
 
 if [[ -z "${ISSUER_WALLET_JSON_B64:-}" && -f "deployments/runtime/issuer_wallet.json" ]]; then
   if base64 --help 2>/dev/null | grep -q -- '-w'; then
@@ -230,6 +232,11 @@ SSI_CONTRACT_FILE=deployments/blockchain_contract.sepolia.json
 SSI_ISSUER_WALLET_FILE=deployments/runtime/issuer_wallet.json
 SSI_HOLDER_WALLET_FILE=deployments/runtime/wallet.json
 SSI_CORS_ORIGINS=${FRONTEND_EXTERNAL_URL},${BACKEND_EXTERNAL_URL}
+SSI_ADMIN_USER=${SSI_ADMIN_USER}
+SSI_ADMIN_PASSWORD=${SSI_ADMIN_PASSWORD}
+SSI_RPC_TIMEOUT=30
+SSI_WAIT_FOR_RECEIPT=0
+SSI_TX_RECEIPT_TIMEOUT=120
 EOF
 copy_file "$TMPDIR/backend.env" "$BACKEND_SSH_PORT" "${DEPLOY_PATH}/.env"
 remote_cmd "$BACKEND_SSH_PORT" "cd '${DEPLOY_PATH}' && docker compose --env-file .env -f config/compose_vms/vm_servers/docker_compose.yml down --remove-orphans || true && docker compose --env-file .env -f config/compose_vms/vm_servers/docker_compose.yml up -d --build"
