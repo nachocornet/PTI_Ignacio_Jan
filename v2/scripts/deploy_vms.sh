@@ -4,22 +4,72 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-: "${NATTECH_HOST:?NATTECH_HOST is required}"
-: "${SSH_USER:?SSH_USER is required}"
-: "${FRONTEND_SSH_PORT:?FRONTEND_SSH_PORT is required}"
-: "${BACKEND_SSH_PORT:?BACKEND_SSH_PORT is required}"
-: "${DB_SSH_PORT:?DB_SSH_PORT is required}"
-: "${DEPLOY_PATH:?DEPLOY_PATH is required}"
-: "${DB_PASSWORD:?DB_PASSWORD is required}"
-: "${ISSUER_WALLET_JSON_B64:?ISSUER_WALLET_JSON_B64 is required}"
-: "${SEPOLIA_RPC_URL:?SEPOLIA_RPC_URL is required}"
+for env_file in ".env" "config/.env" "config/.env.vms" "scripts/.env.vms"; do
+  if [[ -f "$env_file" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file"
+    set +a
+  fi
+done
+
+NATTECH_HOST="${NATTECH_HOST:-nattech.fib.upc.edu}"
+SSH_USER="${SSH_USER:-alumne}"
+FRONTEND_SSH_PORT="${FRONTEND_SSH_PORT:-40561}"
+BACKEND_SSH_PORT="${BACKEND_SSH_PORT:-40571}"
+DB_SSH_PORT="${DB_SSH_PORT:-40581}"
+DEPLOY_PATH="${DEPLOY_PATH:-/home/alumne/pti-v2}"
+DB_PASSWORD="${DB_PASSWORD:-${POSTGRES_PASSWORD:-}}"
 
 POSTGRES_USER="${POSTGRES_USER:-ssi_user}"
 POSTGRES_DB="${POSTGRES_DB:-ssi_db}"
-FRONTEND_EXTERNAL_URL="${FRONTEND_EXTERNAL_URL:-http://nattech.fib.upc.edu:40560}"
-BACKEND_EXTERNAL_URL="${BACKEND_EXTERNAL_URL:-http://nattech.fib.upc.edu:40570}"
+FRONTEND_EXTERNAL_URL="${FRONTEND_EXTERNAL_URL:-http://${NATTECH_HOST}:40560}"
+BACKEND_EXTERNAL_URL="${BACKEND_EXTERNAL_URL:-http://${NATTECH_HOST}:40570}"
 
-SSH_COMMON=(-o BatchMode=yes -o StrictHostKeyChecking=yes)
+if [[ -z "${ISSUER_WALLET_JSON_B64:-}" && -f "deployments/runtime/issuer_wallet.json" ]]; then
+  if base64 --help 2>/dev/null | grep -q -- '-w'; then
+    ISSUER_WALLET_JSON_B64="$(base64 -w 0 deployments/runtime/issuer_wallet.json)"
+  else
+    ISSUER_WALLET_JSON_B64="$(base64 < deployments/runtime/issuer_wallet.json | tr -d '\n')"
+  fi
+fi
+
+if [[ -z "${DB_PASSWORD:-}" && -t 0 ]]; then
+  read -r -s -p "DB_PASSWORD: " DB_PASSWORD
+  echo
+fi
+
+if [[ -z "${SEPOLIA_RPC_URL:-}" && -t 0 ]]; then
+  read -r -p "SEPOLIA_RPC_URL: " SEPOLIA_RPC_URL
+fi
+
+if [[ -z "${ISSUER_WALLET_JSON_B64:-}" && -t 0 ]]; then
+  read -r -p "Path issuer wallet JSON [deployments/runtime/issuer_wallet.json]: " wallet_file
+  wallet_file="${wallet_file:-deployments/runtime/issuer_wallet.json}"
+  if [[ -f "$wallet_file" ]]; then
+    if base64 --help 2>/dev/null | grep -q -- '-w'; then
+      ISSUER_WALLET_JSON_B64="$(base64 -w 0 "$wallet_file")"
+    else
+      ISSUER_WALLET_JSON_B64="$(base64 < "$wallet_file" | tr -d '\n')"
+    fi
+  fi
+fi
+
+missing=()
+for var_name in DB_PASSWORD ISSUER_WALLET_JSON_B64 SEPOLIA_RPC_URL; do
+  if [[ -z "${!var_name:-}" ]]; then
+    missing+=("$var_name")
+  fi
+done
+
+if (( ${#missing[@]} > 0 )); then
+  echo "[deploy-vms] Missing required vars: ${missing[*]}" >&2
+  echo "[deploy-vms] Export them or create ${ROOT}/.env with those keys." >&2
+  exit 1
+fi
+
+SSH_STRICT_HOST_KEY_CHECKING="${SSH_STRICT_HOST_KEY_CHECKING:-accept-new}"
+SSH_COMMON=(-o BatchMode=yes -o StrictHostKeyChecking="${SSH_STRICT_HOST_KEY_CHECKING}")
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
@@ -59,6 +109,30 @@ copy_file() {
   local port="$2"
   local target="$3"
   rsync -az -e "ssh -p ${port} ${SSH_COMMON[*]}" "$source" "${SSH_USER}@${NATTECH_HOST}:${target}"
+}
+
+ensure_remote_docker() {
+  local port="$1"
+  remote_cmd "$port" "if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  exit 0
+fi
+
+echo '[deploy-vms] Docker/Compose missing on target VM. Trying auto-install...' >&2
+
+if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+  sudo apt-get update -y
+  sudo apt-get install -y docker.io docker-compose-plugin
+elif [[ \"\$(id -u)\" == \"0\" ]]; then
+  apt-get update -y
+  apt-get install -y docker.io docker-compose-plugin
+else
+  echo '[deploy-vms] Cannot auto-install Docker (no sudo without password).' >&2
+  echo '[deploy-vms] Install manually and retry:' >&2
+  echo '  sudo apt-get update -y && sudo apt-get install -y docker.io docker-compose-plugin' >&2
+  exit 1
+fi
+
+docker compose version >/dev/null 2>&1"
 }
 
 wait_remote_http() {
@@ -106,6 +180,7 @@ PY"
 
 echo "[deploy-vms] Syncing repository to DB VM..."
 remote_cmd "$DB_SSH_PORT" "mkdir -p '${DEPLOY_PATH}' '${DEPLOY_PATH}/deployments/runtime'"
+ensure_remote_docker "$DB_SSH_PORT"
 sync_repo "$DB_SSH_PORT"
 cat > "$TMPDIR/db.env" <<EOF
 POSTGRES_USER=${POSTGRES_USER}
@@ -118,6 +193,7 @@ wait_remote_tcp "$DB_SSH_PORT" "127.0.0.1" "5432"
 
 echo "[deploy-vms] Syncing repository to Backend VM..."
 remote_cmd "$BACKEND_SSH_PORT" "mkdir -p '${DEPLOY_PATH}' '${DEPLOY_PATH}/deployments/runtime'"
+ensure_remote_docker "$BACKEND_SSH_PORT"
 sync_repo "$BACKEND_SSH_PORT"
 printf '%s' "${ISSUER_WALLET_JSON_B64}" | base64 -d > "$TMPDIR/issuer_wallet.json"
 copy_file "$TMPDIR/issuer_wallet.json" "$BACKEND_SSH_PORT" "${DEPLOY_PATH}/deployments/runtime/issuer_wallet.json"
@@ -137,6 +213,7 @@ wait_remote_http "$BACKEND_SSH_PORT" "http://127.0.0.1:8080/health/verifier"
 
 echo "[deploy-vms] Syncing repository to Frontend VM..."
 remote_cmd "$FRONTEND_SSH_PORT" "mkdir -p '${DEPLOY_PATH}'"
+ensure_remote_docker "$FRONTEND_SSH_PORT"
 sync_repo "$FRONTEND_SSH_PORT"
 cat > "$TMPDIR/frontend.variables.js" <<EOF
 window.SSI_CONFIG = {
