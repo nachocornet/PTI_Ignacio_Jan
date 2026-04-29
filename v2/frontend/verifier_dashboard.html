@@ -136,21 +136,28 @@
         const body = await res.json();
         if (!res.ok) throw new Error(body.detail || "Error en el servidor");
 
-        // 1. Comprobamos la mayoría de edad desde la VC cargada
-        const esMayor = vc.credentialSubject.isOver18; //
-        
-        // 2. Definimos el título y el estado visual
+        // 1. Extraemos el valor de mayoría de edad de forma segura
+        // Miramos si es un objeto directo o el primer elemento de un array
+        const subject = Array.isArray(vc.credentialSubject) ? vc.credentialSubject[0] : vc.credentialSubject;
+        const esMayor = subject?.isOver18 === true;
+
+        // 2. Definimos los textos dinámicos según la edad
         const titulo = esMayor ? '✅ ACCESO AUTORIZADO' : '🔞 ACCESO RESTRINGIDO (MENOR)';
         const statusEdad = esMayor ? '🟢 Mayor de edad' : '🔞 Menor de edad';
 
+        // 3. Mostramos el panel de control completo y formateado
         out.textContent = [
           titulo,
           '----------------------',
-          `Edad: ${statusEdad}`,
+          `Información: ${statusEdad}`,
           `Emisor: ${body.onchain?.issuerAuthorized ? 'Válido (Ministerio)' : 'No autorizado'}`,
           `Titular: ${body.onchain?.holderDidActive ? 'Activo' : 'Inactivo'}`,
           `Estado: ${body.onchain?.credentialRevoked ? '🔴 REVOCADO' : '🟢 VIGENTE'}`
-        ].join('\n'); //
+        ].join('\n');
+
+        // Opcional: Cambiar el color del borde de la tarjeta según el acceso
+        const card = out.closest('.card');
+        if (card) card.style.borderColor = esMayor ? '#0f766e' : '#e11d48';
       } catch (e) {
         out.textContent = "❌ ACCESO DENEGADO: " + e.message;
       }
