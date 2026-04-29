@@ -255,7 +255,7 @@ def main():
     if is_port_open(SETTINGS.issuer_port):
         log("Issuer API already running; reusing existing service", "OK")
     else:
-        issuer_cmd = f"python3 -m uvicorn services.issuer.app:app --host {SETTINGS.app_host} --port {SETTINGS.issuer_port}"
+        issuer_cmd = f"python3 -m uvicorn services.issuer_dni.app:app --host {SETTINGS.app_host} --port {SETTINGS.issuer_port}"
         run_async(issuer_cmd, name="Issuer API")
 
         if not wait_for_port(SETTINGS.issuer_port, timeout=10):

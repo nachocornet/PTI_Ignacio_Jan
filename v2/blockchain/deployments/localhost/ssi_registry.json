@@ -2,7 +2,7 @@
   "contractName": "SSIRegistry",
   "network": "localhost",
   "chainId": 31337,
-  "deployedAt": "2026-04-27T12:59:04.818Z",
+  "deployedAt": "2026-04-29T12:11:02.046Z",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "deploymentTxHash": "0xc8160a3349d4a45a85a759b6e25e6cda577202f6d49859bc8284c1ff02a081af",
   "deploymentBlock": 1,
