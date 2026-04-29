@@ -14,10 +14,10 @@
     .nav { display: flex; gap: 15px; margin-bottom: 10px; }
     .nav a { text-decoration: none; color: var(--accent); font-weight: 600; }
     h1 { color: #1e293b; margin: 0 0 10px; }
-    .step { padding: 15px; border-radius: 12px; margin-bottom: 15px; background: #fdf2f8; border: 1px solid #fbcfe8; }
+    .step { padding: 15px; border-radius: 12px; margin-bottom: 15px; background: #fff1f2; border: 1px solid #fecdd3; }
     input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-top: 5px; background: white; }
-    button { border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; font-weight: 600; background: var(--primary); color: white; margin-top: 10px; width: 100%; }
-    pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 10px; overflow: auto; }
+    button { border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; font-weight: 700; background: var(--primary); color: white; margin-top: 10px; width: 100%; }
+    pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 10px; overflow: auto; min-height: 100px; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -26,15 +26,18 @@
     
     <div class="card">
       <h1>Verificador de Identidad</h1>
-      <p>Valida la autenticidad de un DNI digital consultando el estado en tiempo real en la Blockchain.</p>
+      <p>Valida tu identidad firmando criptográficamente. El sistema comprobará la validez on-chain.</p>
       
       <div class="step">
         <strong>1. Tu Cartera (Holder)</strong>
-        <input type="file" id="walletFile" accept=".json">
+        <div id="wallet-status" style="margin-bottom: 10px; color: #0f766e; font-weight: 600;"></div>
+        <div id="walletInputContainer">
+          <input type="file" id="walletFile" accept=".json">
+        </div>
       </div>
       
       <div class="step">
-        <strong>2. DNI Digital (VC)</strong>
+        <strong>2. DNI Digital (Archivo JSON)</strong>
         <input type="file" id="vcFile" accept=".json">
       </div>
 
@@ -42,31 +45,70 @@
     </div>
 
     <div class="card">
-      <h3>Resultado de la Verificación</h3>
-      <pre id="output">Esperando archivos...</pre>
+      <h3>Resultado del Control</h3>
+      <pre id="output">Sube tu DNI digital para verificar.</pre>
     </div>
   </div>
 
   <script>
     const config = window.SSI_CONFIG || {};
     const apiBaseUrl = (config.urls?.verifierApiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
-    let wallet = null; let vc = null;
+    let wallet = null; 
+    let vc = null;
+
+    // --- CARGAR WALLET DESDE LOCALSTORAGE ---
+    function loadWallet() {
+      const stored = localStorage.getItem('ssi_holder_wallet');
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          wallet = new ethers.Wallet(data.private_key);
+          document.getElementById('wallet-status').innerHTML = `✅ Cartera Activa (${data.did.substring(0,18)}...) <a href="#" onclick="clearWallet()" style="color:#e11d48; margin-left:10px; font-weight:normal; text-decoration:none;">[Cambiar]</a>`;
+          document.getElementById('walletInputContainer').style.display = 'none';
+        } catch (e) { clearWallet(); }
+      }
+    }
+
+    function clearWallet() {
+      localStorage.removeItem('ssi_holder_wallet');
+      wallet = null;
+      document.getElementById('wallet-status').innerHTML = '';
+      document.getElementById('walletInputContainer').style.display = 'block';
+    }
+
+    window.onload = loadWallet;
 
     document.getElementById('walletFile').onchange = async (e) => {
-      const data = JSON.parse(await e.target.files[0].text());
-      wallet = new ethers.Wallet(data.private_key);
+      const text = await e.target.files[0].text();
+      localStorage.setItem('ssi_holder_wallet', text);
+      loadWallet();
     };
 
     document.getElementById('vcFile').onchange = async (e) => {
-      vc = JSON.parse(await e.target.files[0].text());
+      try {
+        vc = JSON.parse(await e.target.files[0].text());
+        document.getElementById('output').textContent = "DNI cargado correctamente. Listo para verificar.";
+      } catch (e) { alert("Archivo DNI inválido"); }
     };
+
+    // --- FUNCIÓN DE CANONICIDAD RECURSIVA ---
+    function canonicalize(obj) {
+      if (Array.isArray(obj)) return obj.map(canonicalize);
+      if (obj !== null && typeof obj === 'object') {
+        return Object.keys(obj).sort().reduce((acc, key) => {
+          acc[key] = canonicalize(obj[key]);
+          return acc;
+        }, {});
+      }
+      return obj;
+    }
 
     document.getElementById('btn-verify').onclick = async () => {
       const out = document.getElementById('output');
-      if (!wallet || !vc) return alert("Por favor, carga ambos archivos JSON.");
+      if (!wallet || !vc) return alert("Por favor, asegúrate de tener la Cartera y el DNI cargados.");
 
       try {
-        out.textContent = "Consultando Blockchain Sepolia...";
+        out.textContent = "Generando prueba de identidad y consultando Blockchain...";
         
         const vp = {
           '@context': ['https://www.w3.org/2018/credentials/v1'],
@@ -74,38 +116,36 @@
           verifiableCredential: vc
         };
 
-        function canonicalize(obj) {
-            if (Array.isArray(obj)) return obj.map(canonicalize);
-            if (obj !== null && typeof obj === 'object') {
-                return Object.keys(obj).sort().reduce((acc, key) => {
-                    acc[key] = canonicalize(obj[key]);
-                    return acc;
-                }, {});
-            }
-            return obj;
-        }
-
+        // Ordenar el JSON igual que lo hace Python para que la firma coincida
         const canonical = JSON.stringify(canonicalize(vp));
-        // ---------------------------------------------------------------
-
         const signature = await wallet.signMessage(canonical);
-        vp.proof = { 
-            type: 'EcdsaSecp256k1RecoverySignature2020', 
-            proofPurpose: 'authentication', 
-            verificationMethod: `did:ethr:${wallet.address}`, 
-            proofValue: signature 
+        
+        vp.proof = {
+          type: 'EcdsaSecp256k1RecoverySignature2020',
+          proofPurpose: 'authentication',
+          verificationMethod: `did:ethr:${wallet.address}`,
+          proofValue: signature
         };
 
         const res = await fetch(`${apiBaseUrl}/api/verify_presentation`, {
-          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ vp })
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vp })
         });
         
         const body = await res.json();
-        if (!res.ok) throw new Error(body.detail || "Verificación fallida");
+        if (!res.ok) throw new Error(body.detail || "Error en el servidor");
 
-        out.textContent = `✅ ACCESO AUTORIZADO\n----------------------\nIssuer: Válido\nHolder: Activo\nBlockchain Status: No Revocado`;
-      } catch (e) { 
-        out.textContent = "❌ ACCESO DENEGADO: " + e.message; 
+        out.textContent = [
+          '✅ ACCESO AUTORIZADO',
+          '----------------------',
+          `Emisor: ${body.onchain?.issuerAuthorized ? 'Válido (Ministerio)' : 'No autorizado'}`,
+          `Titular: ${body.onchain?.holderDidActive ? 'Activo' : 'Inactivo'}`,
+          `Estado: ${body.onchain?.credentialRevoked ? '🔴 REVOCADO' : '🟢 VIGENTE'}`
+        ].join('\n');
+
+      } catch (e) {
+        out.textContent = "❌ ACCESO DENEGADO: " + e.message;
       }
     };
   </script>

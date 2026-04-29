@@ -16,9 +16,9 @@
     h1 { color: #1e293b; margin: 0 0 10px; }
     .step { padding: 15px; border-radius: 12px; margin-bottom: 15px; background: #f0f9ff; border: 1px solid #bae6fd; }
     .step-generate { background: #ecfdf5; border-color: #a7f3d0; }
-    input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-top: 5px; }
+    input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-top: 5px; box-sizing: border-box; }
     button { border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; font-weight: 600; background: var(--primary); color: white; margin-top: 10px; }
-    pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 10px; overflow: auto; min-height: 100px; }
+    pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 10px; overflow: auto; min-height: 100px; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -26,28 +26,36 @@
     <div class="nav"><a href="/frontend_portal.html">🏠 Inicio</a></div>
     
     <div class="card step step-generate">
-      <strong>Paso 0: ¿No tienes cartera?</strong>
-      <p style="font-size: 0.85rem; margin: 5px 0;">Genera una identidad nueva. Guarda el archivo .json para identificarte después.</p>
-      <button onclick="generarWallet()" style="background: #059669;">🆕 Generar nueva Identidad</button>
+      <strong>Paso 0: ¿No tienes una Identidad Digital?</strong>
+      <p style="font-size: 0.85rem; margin: 5px 0;">Genera una identidad nueva. Se guardará en tu navegador para que no tengas que cargarla cada vez.</p>
+      <button onclick="generarWallet()" style="background: #059669;">🆕 Generar y Guardar Identidad</button>
     </div>
 
     <div class="card">
       <h1>Emisión de DNI Digital</h1>
+      
       <div class="step">
-        <strong>Paso 1: Carga tu Identidad (Wallet)</strong>
-        <input type="file" id="walletInput" accept=".json">
+        <strong>Paso 1: Tu Identidad (Wallet)</strong>
+        <div id="wallet-status" style="margin-bottom: 10px; color: #0f766e; font-weight: 600;"></div>
+        <div id="walletInputContainer">
+          <input type="file" id="walletInput" accept=".json">
+        </div>
       </div>
+
       <div class="step">
-        <strong>Paso 2: Datos del Ciudadano</strong>
-        <input id="dni" placeholder="DNI (ej: 12345678Z)">
-        <input id="did" readonly placeholder="DID (se autocompleta)">
+        <strong>Paso 2: Validar Datos</strong>
+        <label style="font-size: 0.85rem; font-weight: 600;">Tu número de DNI</label>
+        <input id="dni" placeholder="Ej: 12345678Z">
+        <label style="margin-top:10px; display:block; font-size: 0.85rem; font-weight: 600;">Tu Identificador (DID)</label>
+        <input id="did" readonly placeholder="Se cargará de tu identidad" style="background:#f1f5f9;">
       </div>
-      <button id="btn-issue">Generar DNI en Blockchain</button>
-      <button id="btn-download" style="display:none; background: #0284c7;">📥 Descargar DNI (JSON)</button>
+
+      <button id="btn-issue" style="width: 100%;">Generar DNI en Blockchain</button>
+      <button id="btn-download" style="display:none; background: #0284c7; width: 100%; margin-top: 10px;">📥 Descargar Credencial (JSON)</button>
     </div>
 
     <div class="card">
-      <h3>Estado</h3>
+      <h3>Estado de Actividad</h3>
       <pre id="output">Listo para operar.</pre>
     </div>
   </div>
@@ -57,43 +65,86 @@
     const apiBaseUrl = (config.urls?.issuerApiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
     let vcData = null;
 
+    // --- LÓGICA DE PERSISTENCIA DE WALLET ---
+    function loadWallet() {
+      const stored = localStorage.getItem('ssi_holder_wallet');
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          document.getElementById('did').value = data.did;
+          document.getElementById('wallet-status').innerHTML = `✅ Identidad Activa (${data.did.substring(0,18)}...) <a href="#" onclick="clearWallet()" style="color:#e11d48; margin-left:10px; font-weight:normal; text-decoration:none;">[Borrar]</a>`;
+          document.getElementById('walletInputContainer').style.display = 'none';
+        } catch (e) { clearWallet(); }
+      }
+    }
+
+    function clearWallet() {
+      localStorage.removeItem('ssi_holder_wallet');
+      document.getElementById('did').value = '';
+      document.getElementById('wallet-status').innerHTML = '';
+      document.getElementById('walletInputContainer').style.display = 'block';
+    }
+
+    window.onload = loadWallet;
+
     function generarWallet() {
       const wallet = ethers.Wallet.createRandom();
-      const data = { private_key: wallet.privateKey, address: wallet.address, did: `did:ethr:${wallet.address}` };
+      const data = { 
+        private_key: wallet.privateKey, 
+        address: wallet.address, 
+        did: `did:ethr:${wallet.address}` 
+      };
+      // Guardar en localStorage para persistencia entre páginas
+      localStorage.setItem('ssi_holder_wallet', JSON.stringify(data));
+      loadWallet();
+      
+      // Descargar archivo para respaldo
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = "mi_cartera_ssi.json";
       a.click();
-      alert("Identidad descargada.");
+      alert("Identidad generada y guardada en el navegador.");
     }
 
     document.getElementById('walletInput').onchange = async (e) => {
-      const data = JSON.parse(await e.target.files[0].text());
-      document.getElementById('did').value = data.did;
+      const text = await e.target.files[0].text();
+      localStorage.setItem('ssi_holder_wallet', text);
+      loadWallet();
     };
+    // ----------------------------------------
 
     document.getElementById('btn-issue').onclick = async () => {
       const out = document.getElementById('output');
       try {
-        out.textContent = "Emitiendo...";
+        out.textContent = "Emitiendo DNI... Por favor, espera.";
         const res = await fetch(`${apiBaseUrl}/api/credentials/issue_dni`, {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ did_ciudadano: document.getElementById('did').value, numero_dni: document.getElementById('dni').value })
+          method: 'POST', 
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ 
+            did_ciudadano: document.getElementById('did').value, 
+            numero_dni: document.getElementById('dni').value 
+          })
         });
         const body = await res.json();
-        if (!res.ok) throw new Error(body.detail);
+        
+        if (!res.ok) throw new Error(body.detail || "Error en la emisión");
+        
         vcData = body.credential;
-        document.getElementById('btn-download').style.display = 'inline-block';
-        out.textContent = "✅ Éxito: DNI emitido en blockchain.";
-      } catch (e) { out.textContent = "❌ " + e.message; }
+        document.getElementById('btn-download').style.display = 'block';
+        out.textContent = "✅ ¡DNI emitido con éxito y registrado en Blockchain!";
+      } catch (e) { 
+        out.textContent = "❌ ERROR: " + e.message; 
+      }
     };
 
     document.getElementById('btn-download').onclick = () => {
+      if (!vcData) return;
+      // Descargar con formato (2 espacios de sangría) para que sea legible
       const blob = new Blob([JSON.stringify(vcData, null, 2)], { type: "application/json" });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = "dni_digital.json";
+      a.download = "mi_dni_digital.json";
       a.click();
     };
   </script>
