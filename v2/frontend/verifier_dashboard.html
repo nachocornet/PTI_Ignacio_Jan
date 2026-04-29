@@ -136,14 +136,21 @@
         const body = await res.json();
         if (!res.ok) throw new Error(body.detail || "Error en el servidor");
 
+        // 1. Comprobamos la mayoría de edad desde la VC cargada
+        const esMayor = vc.credentialSubject.isOver18; //
+        
+        // 2. Definimos el título y el estado visual
+        const titulo = esMayor ? '✅ ACCESO AUTORIZADO' : '🔞 ACCESO RESTRINGIDO (MENOR)';
+        const statusEdad = esMayor ? '🟢 Mayor de edad' : '🔞 Menor de edad';
+
         out.textContent = [
-          '✅ ACCESO AUTORIZADO',
+          titulo,
           '----------------------',
+          `Edad: ${statusEdad}`,
           `Emisor: ${body.onchain?.issuerAuthorized ? 'Válido (Ministerio)' : 'No autorizado'}`,
           `Titular: ${body.onchain?.holderDidActive ? 'Activo' : 'Inactivo'}`,
           `Estado: ${body.onchain?.credentialRevoked ? '🔴 REVOCADO' : '🟢 VIGENTE'}`
-        ].join('\n');
-
+        ].join('\n'); //
       } catch (e) {
         out.textContent = "❌ ACCESO DENEGADO: " + e.message;
       }
