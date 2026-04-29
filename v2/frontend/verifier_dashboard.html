@@ -134,7 +134,14 @@
         });
         
         const body = await res.json();
-        if (!res.ok) throw new Error(body.detail || "Error en el servidor");
+        
+        if (!res.ok) {
+          let errorMsg = body.detail;
+          if (typeof body.detail === 'object' && body.detail.error) {
+              errorMsg = body.detail.error;
+          }
+          throw new Error(errorMsg || "Error en el servidor");
+        }
 
         // 1. Extraemos el valor de mayoría de edad de forma segura
         // Miramos si es un objeto directo o el primer elemento de un array
