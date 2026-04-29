@@ -3,137 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSI Portal - Login</title>
+  <title>SSI Portal | Login</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f766e 0%, #1e293b 100%);
       min-height: 100vh;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: center; justify-content: center;
     }
     .login-container {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      width: 100%;
-      max-width: 400px;
-      padding: 40px;
+      background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      width: 100%; max-width: 400px; padding: 40px; text-align: center;
     }
-    h1 {
-      text-align: center;
-      color: #1f2933;
-      margin-bottom: 30px;
-      font-size: 1.8rem;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      color: #4f5f6b;
-      font-weight: 600;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #e0e6e3;
-      border-radius: 8px;
-      font-size: 1rem;
-      transition: border-color 0.3s;
-    }
-    input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-    .login-btn {
-      width: 100%;
-      padding: 12px;
-      background: #667eea;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.3s;
-      margin-top: 20px;
-    }
-    .login-btn:hover {
-      background: #5568d3;
-    }
-    .login-btn:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-    .error {
-      color: #dc2626;
-      font-size: 0.9rem;
-      margin-top: 10px;
-      display: none;
-    }
-    .info {
-      background: #f0f4ff;
-      border-left: 4px solid #667eea;
-      padding: 12px;
-      border-radius: 4px;
-      margin-bottom: 20px;
-      font-size: 0.85rem;
-      color: #4f5f6b;
-    }
-    .session-info {
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 1px solid #e0e6e3;
-      display: none;
-    }
-    .session-info h2 {
-      font-size: 1rem;
-      color: #1f2933;
-      margin-bottom: 12px;
-    }
-    .portal-links {
-      display: grid;
-      gap: 8px;
-    }
-    .portal-link {
-      display: block;
-      padding: 12px;
-      background: #f5f7f6;
-      border: 1px solid #d7e2de;
-      border-radius: 8px;
-      text-decoration: none;
-      color: #155e75;
-      font-weight: 600;
-      text-align: center;
-      transition: background 0.3s;
-    }
-    .portal-link:hover {
-      background: #e8efec;
-    }
-    .logout-btn {
-      width: 100%;
-      padding: 8px;
-      background: #dc2626;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      margin-top: 12px;
-    }
-    .logout-btn:hover {
-      background: #b91c1c;
-    }
+    h1 { color: #1e293b; margin-bottom: 30px; font-size: 1.8rem; }
+    .form-group { margin-bottom: 20px; text-align: left; }
+    label { display: block; color: #4f5f6b; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
+    input { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; transition: 0.3s; }
+    input:focus { outline: none; border-color: #0f766e; }
+    .login-btn { width: 100%; padding: 14px; background: #0f766e; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+    .login-btn:hover { background: #0d9488; }
+    .back-btn { display: inline-block; width: 100%; padding: 12px; margin-top: 15px; color: #64748b; text-decoration: none; font-size: 0.9rem; font-weight: 600; border: 1px solid #e2e8f0; border-radius: 10px; transition: 0.2s; }
+    .back-btn:hover { background: #f8fafc; color: #1e293b; border-color: #cbd5e1; }
+    .error { color: #e11d48; font-size: 0.85rem; margin-top: 10px; display: none; background: #fff1f2; padding: 10px; border-radius: 8px; }
   </style>
 </head>
 <body>
   <div class="login-container">
-    <h1>🔐 SSI Portal</h1>
+    <h1>🔐 SSI Admin Login</h1>
     
     <div id="login-form">
       <div class="form-group">
@@ -145,67 +43,36 @@
         <input id="password" type="password" placeholder="••••••••" />
       </div>
       <div class="error" id="error"></div>
-      <button class="login-btn" id="login-btn">Entrar</button>
+      <button class="login-btn" id="login-btn">Entrar al Sistema</button>
+      
+      <a href="/frontend_portal.html" class="back-btn">🏠 Volver al Portal de Inicio</a>
     </div>
-
-    
   </div>
-<script>
-    const SESSION_KEY = 'ssi_session';
-    const SESSION_DURATION = 3600000; // 1 hora en ms
 
-    function getSession() {
-      const stored = localStorage.getItem(SESSION_KEY);
-      if (!stored) return null;
-      const session = JSON.parse(stored);
-      if (Date.now() > session.expireAt) {
-        localStorage.removeItem(SESSION_KEY);
-        return null;
-      }
-      return session;
-    }
+  <script>
+    const SESSION_KEY = 'ssi_session';
+    const SESSION_DURATION = 3600000;
 
     function setSession(username) {
-      const session = {
-        username,
-        startedAt: Date.now(),
-        expireAt: Date.now() + SESSION_DURATION,
-      };
+      const session = { username, expireAt: Date.now() + SESSION_DURATION };
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      return session;
     }
 
-    document.getElementById('login-btn').addEventListener('click', async () => {
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      const errorEl = document.getElementById('error');
+    document.getElementById('login-btn').addEventListener('click', () => {
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      const err = document.getElementById('error');
 
-      if (!username || !password) {
-        errorEl.textContent = 'Usuario y contraseña requeridos';
-        errorEl.style.display = 'block';
-        return;
-      }
-
-      if (username === 'admin' && password === 'admin123') {
-        setSession(username);
-        errorEl.style.display = 'none';
-        window.location.href = '/issuer_admin.html'; // REDIRECCIÓN DIRECTA
+      if (u === 'admin' && p === 'admin123') {
+        setSession(u);
+        window.location.href = '/issuer_admin.html';
       } else {
-        errorEl.textContent = 'Credenciales inválidas';
-        errorEl.style.display = 'block';
+        err.textContent = 'Credenciales inválidas para administración';
+        err.style.display = 'block';
       }
     });
 
-    document.getElementById('password').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        document.getElementById('login-btn').click();
-      }
-    });
-
-    // Si ya tiene sesión, va directo al admin
-    if (getSession()) {
-      window.location.href = '/issuer_admin.html';
-    }
+    if (localStorage.getItem(SESSION_KEY)) window.location.href = '/issuer_admin.html';
   </script>
 </body>
 </html>

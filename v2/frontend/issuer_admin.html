@@ -54,11 +54,19 @@
 
       <div class="card" style="border-top: 4px solid var(--danger);">
         <h1>Revocar Credencial</h1>
-        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Anula una credencial permanentemente en la Blockchain.</p>
-        <label>Hash de la Credencial</label>
+        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Anula una credencial en la Blockchain extrayendo su hash.</p>
+        
+        <div style="background: #fff1f2; padding: 12px; border-radius: 8px; border: 1px dashed #fecdd3; margin-bottom: 15px;">
+          <label style="color: #be123c;">1. Cargar DNI Digital del usuario (.json)</label>
+          <input type="file" id="vc-revoke-file" accept=".json" style="background: white; margin-bottom: 0;" />
+        </div>
+
+        <label>Hash a Revocar (Se autocompleta o pégalo manual)</label>
         <input id="rev-hash" placeholder="0x..." />
-        <label>Motivo</label>
-        <input id="rev-reason" placeholder="Ej: Pérdida de llaves" />
+        
+        <label>Motivo de la revocación</label>
+        <input id="rev-reason" placeholder="Ej: Caducidad, robo del dispositivo..." />
+        
         <button id="btn-revoke" class="btn-revoke">Revocar On-Chain</button>
       </div>
     </div>
@@ -103,18 +111,25 @@
       } catch (e) { document.getElementById('output').textContent = "❌ Error: " + e.message; }
     };
 
-    document.getElementById('btn-revoke').onclick = async () => {
-      const hash = document.getElementById('rev-hash').value.trim();
-      const reason = document.getElementById('rev-reason').value.trim();
-      if(!hash) return alert("Introduce el hash");
+    document.getElementById('vc-revoke-file').addEventListener('change', async (e) => {
       try {
-        document.getElementById('output').textContent = "Enviando revocación a Blockchain...";
-        const res = await fetch(`${apiBaseUrl}/api/credentials/revoke`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ credential_hash: hash, reason: reason }) });
-        const body = await res.json();
-        if (!res.ok) throw new Error(body.detail);
-        document.getElementById('output').textContent = "✅ Credencial revocada con éxito.\nTX: " + body.tx.txHash;
-      } catch (e) { document.getElementById('output').textContent = "❌ Error revocación: " + e.message; }
-    };
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const fileText = await file.text();
+        const vc = JSON.parse(fileText);
+        
+        if (vc.credentialHash) {
+          document.getElementById('rev-hash').value = vc.credentialHash;
+          document.getElementById('output').textContent = `Hash extraído correctamente del archivo:\n${vc.credentialHash}`;
+        } else {
+          alert("El archivo subido no parece un DNI válido (falta el credentialHash).");
+          document.getElementById('rev-hash').value = "";
+        }
+      } catch (err) {
+        alert("Error al leer el archivo JSON.");
+      }
+    });
 
     window.onload = load;
   </script>
