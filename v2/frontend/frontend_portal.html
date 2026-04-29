@@ -14,22 +14,56 @@
     a.btn { display: block; text-decoration: none; padding: 12px; border-radius: 10px; border: 1px solid #bfd8d2; background: #e9f7f4; color: #115e59; font-weight: 700; }
     a.btn.secondary { background: #f3f7fb; border-color: #cad8e6; color: #1e3a5f; }
     .hint { font-size: 0.9rem; color: #4d5e69; }
+    .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .logout-btn { padding: 8px 12px; background: #e11d48; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
   </style>
 </head>
 <body>
+  <script>
+    // Verificar sesión
+    const SESSION_KEY = 'ssi_session';
+    const session = (() => {
+      const stored = localStorage.getItem(SESSION_KEY);
+      if (!stored) return null;
+      const s = JSON.parse(stored);
+      if (Date.now() > s.expireAt) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return s;
+    })();
+    
+    if (!session) {
+      window.location.href = '/frontend_login.html';
+    }
+  </script>
   <div class="wrap">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h1 style="margin: 0;">SSI v2 - Portal Central</h1>
+      <div>
+        <span style="color: #55636d; margin-right: 12px;">Usuario: <strong id="session-user"></strong></span>
+        <button class="logout-btn" id="logout-btn">Cerrar sesión</button>
+      </div>
+    </div>
     <div class="card">
-      <h1>SSI v2 - Portal de Frontends</h1>
-      <p>Separacion de interfaces para operacion real: issuer por un lado y verifier por otro.</p>
+      <p>Interfaz principal con acceso a todos los servicios SSI.</p>
       <div class="grid">
-        <a class="btn" href="/issuer_dashboard.html">Issuer Dashboard</a>
-        <a class="btn" href="/verifier_dashboard.html">Verifier Dashboard</a>
-        <a class="btn secondary" href="/issuer_admin.html">Issuer Admin</a>
+        <a class="btn" href="/issuer_admin.html">🏛️ Admin Ciudadanos</a>
+        <a class="btn" href="/verifier_dashboard.html">✔️ Verificador</a>
+        <a class="btn secondary" href="/issuer_dashboard.html">🪪 Issuer (Debug)</a>
       </div>
     </div>
     <div class="card hint">
-      Recomendacion: en produccion despliega cada frontend en dominios separados y limita CORS a su origen.
+      En producción, cada módulo (admin, verifier) se deplega en dominios separados con autenticación y autorización estrictas.
     </div>
   </div>
+
+  <script>
+    document.getElementById('session-user').textContent = session?.username || 'Desconocido';
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.removeItem(SESSION_KEY);
+      window.location.href = '/frontend_login.html';
+    });
+  </script>
 </body>
 </html>

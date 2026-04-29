@@ -40,8 +40,12 @@
         <input id="wallet-file" type="file" accept="application/json" />
       </div>
       <div class="row">
-        <label for="vc-json">VC JSON</label>
-        <textarea id="vc-json" placeholder="Pega aquí la VC emitida por Issuer"></textarea>
+        <label for="vc-file">VC JSON (Archivo)</label>
+        <input id="vc-file" type="file" accept="application/json" />
+      </div>
+      <div class="row">
+        <label for="vc-json">VC JSON (o pega aquí)</label>
+        <textarea id="vc-json" placeholder="Pega aquí la VC emitida por Issuer, o carga un archivo"></textarea>
       </div>
       <div class="actions">
         <button id="btn-verify" class="alt">Firmar VP y verificar</button>
@@ -57,6 +61,7 @@
     const apiBaseUrl = (config.urls?.verifierApiBaseUrl || config.urls?.apiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
     const apiBase = document.getElementById('api-base-url');
     const walletFile = document.getElementById('wallet-file');
+    const vcFile = document.getElementById('vc-file');
     const vcJson = document.getElementById('vc-json');
     const out = document.getElementById('output');
 
@@ -88,6 +93,19 @@
         setOut(`Wallet cargada OK\nDID: ${did}\nAddress: ${wallet.address}`);
       } catch (e) {
         setOut(`Error wallet: ${e.message}`);
+      }
+    });
+
+    vcFile.addEventListener('change', async (event) => {
+      const f = event.target.files?.[0];
+      if (!f) return;
+      try {
+        const raw = await f.text();
+        const data = JSON.parse(raw);
+        vcJson.value = JSON.stringify(data, null, 2);
+        setOut(`VC cargada OK (${Math.round(raw.length / 1024)} KB)`);
+      } catch (e) {
+        setOut(`Error VC: ${e.message}`);
       }
     });
 

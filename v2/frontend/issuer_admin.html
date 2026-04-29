@@ -55,11 +55,33 @@
   </style>
 </head>
 <body>
+  <script>
+    // Verificar sesión
+    const SESSION_KEY = 'ssi_session';
+    const session = (() => {
+      const stored = localStorage.getItem(SESSION_KEY);
+      if (!stored) return null;
+      const s = JSON.parse(stored);
+      if (Date.now() > s.expireAt) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return s;
+    })();
+    
+    if (!session) {
+      alert('Sesión expirada. Vuelve a iniciar sesión.');
+      window.location.href = '/frontend_login.html';
+    }
+  </script>
   <div class="wrap">
     <div class="card nav-card">
-      <a href="/frontend_portal.html">🏠 Inicio</a>
+      <a href="/frontend_login.html">🏠 Portal</a>
       <a href="/issuer_dashboard.html">🪪 Issuer</a>
-      <a href="/verifier_dashboard.html">🏢 Verifier</a>
+      <a href="/verifier_dashboard.html">✔️ Verifier</a>
+      <span style="flex-grow: 1;"></span>
+      <span style="color: #64748b; font-size: 0.9rem;">Usuario: <strong id="session-user"></strong></span>
+      <button id="logout-btn" style="background: #e11d48; color: white; border: none; border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Cerrar sesión</button>
     </div>
 
     <div class="card">
@@ -142,6 +164,25 @@
   <script>
     const config = window.SSI_CONFIG || {};
     const apiBaseUrl = (config.urls?.issuerApiBaseUrl || config.urls?.apiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
+
+    // Sesión
+    const SESSION_KEY = 'ssi_session';
+    const session = (() => {
+      const stored = localStorage.getItem(SESSION_KEY);
+      if (!stored) return null;
+      const s = JSON.parse(stored);
+      if (Date.now() > s.expireAt) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return s;
+    })();
+    
+    document.getElementById('session-user').textContent = session?.username || 'Desconocido';
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.removeItem(SESSION_KEY);
+      window.location.href = '/frontend_login.html';
+    });
 
     const apiBase = document.getElementById('api-base-url');
     const userEl = document.getElementById('admin-user');

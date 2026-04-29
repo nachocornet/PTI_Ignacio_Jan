@@ -15,11 +15,12 @@ services:
 
   issuer:
     build: .
-    command: uvicorn services.issuer.app:app --host 0.0.0.0 --port 5010
+    command: uvicorn services.issuer_dni.app:app --host 0.0.0.0 --port 5010
     ports:
       - "5010:5010"
     environment:
       - DATABASE_URL=postgresql+psycopg2://ssi_user:ssi_password@db:5432/ssi_db
+      - SSI_ISSUER_WALLET_FILE=deployments/runtime/issuer_wallet.json
     depends_on:
       - db
 
