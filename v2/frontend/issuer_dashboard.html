@@ -17,42 +17,38 @@
     .step { padding: 15px; border-radius: 12px; margin-bottom: 15px; background: #f0f9ff; border: 1px solid #bae6fd; }
     input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-top: 5px; }
     button { border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; font-weight: 600; background: var(--primary); color: white; margin-top: 10px; }
-    pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 10px; overflow: auto; }
+    pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 10px; overflow: auto; min-height: 100px; }
   </style>
 </head>
 <body>
-  <script>
-    if (!localStorage.getItem('ssi_session')) window.location.href = '/frontend_login.html';
-  </script>
-
   <div class="wrap">
-    <div class="nav"><a href="/frontend_portal.html">🏠 Inicio</a><a href="/issuer_admin.html">⚙️ Admin</a></div>
+    <div class="nav"><a href="/frontend_portal.html">🏠 Inicio</a><a href="/issuer_admin.html">⚙️ Admin DB</a></div>
     
     <div class="card">
       <h1>Emisión de DNI Digital</h1>
       <div class="step">
-        <strong>Paso 1: Carga tu Wallet</strong>
+        <strong>1. Tu Identidad (Wallet)</strong>
         <input type="file" id="walletInput" accept=".json">
       </div>
       <div class="step">
-        <strong>Paso 2: Confirmar Datos</strong>
-        <input id="dni" placeholder="DNI (ej: 12345678A)">
-        <input id="did" readonly placeholder="DID (Se cargará de la wallet)">
+        <strong>2. Validar Datos</strong>
+        <input id="dni" placeholder="DNI (ej: 12345678Z)">
+        <input id="did" readonly placeholder="DID (se autocompleta al cargar wallet)">
       </div>
-      <button id="btn-issue">Emitir en Blockchain</button>
-      <button id="btn-download" style="display:none; background: #0284c7;">📥 Descargar DNI</button>
+      <button id="btn-issue">Generar DNI en Blockchain</button>
+      <button id="btn-download" style="display:none; background: #0284c7;">📥 Descargar Credencial</button>
     </div>
 
     <div class="card">
-      <h3>Estado</h3>
-      <pre id="output">Listo.</pre>
+      <h3>Estado de Actividad</h3>
+      <pre id="output">Esperando...</pre>
     </div>
   </div>
 
   <script>
     const config = window.SSI_CONFIG || {};
     const apiBaseUrl = (config.urls?.issuerApiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
-    let vc = null;
+    let vcData = null;
 
     document.getElementById('walletInput').onchange = async (e) => {
       const data = JSON.parse(await e.target.files[0].text());
@@ -62,23 +58,23 @@
     document.getElementById('btn-issue').onclick = async () => {
       const out = document.getElementById('output');
       try {
-        out.textContent = "Procesando...";
+        out.textContent = "Emitiendo... Por favor, espera.";
         const res = await fetch(`${apiBaseUrl}/api/credentials/issue_dni`, {
           method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ did_ciudadano: document.getElementById('did').value, numero_dni: document.getElementById('dni').value })
         });
         const body = await res.json();
-        if (!res.ok) throw new Error(body.detail);
-        vc = body.credential;
+        if (!res.ok) throw new Error(body.detail || "Error en el servidor");
+        vcData = body.credential;
         document.getElementById('btn-download').style.display = 'inline-block';
-        out.textContent = "✅ Éxito: DNI emitido.";
+        out.textContent = "✅ DNI emitido correctamente y registrado on-chain.";
       } catch (e) { out.textContent = "❌ " + e.message; }
     };
 
     document.getElementById('btn-download').onclick = () => {
       const a = document.createElement('a');
-      a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(vc));
-      a.download = "dni_digital.json";
+      a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(vcData));
+      a.download = "mi_dni_digital.json";
       a.click();
     };
   </script>
