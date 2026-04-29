@@ -3,27 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSI v2 | Admin DB</title>
+  <title>SSI v2 | Panel de Control</title>
   <script src="frontend.variables.js"></script>
   <style>
-    :root { --primary: #0f766e; --bg: #f8fafc; --text: #334155; --border: #e2e8f0; }
-    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
-    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 20px; }
-    .card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px rgb(0 0 0 / 0.1); }
-    .nav-card { display: flex; gap: 15px; padding: 12px 24px; align-items: center; }
+    :root { --primary: #0f766e; --bg: #f8fafc; --text: #334155; --border: #e2e8f0; --danger: #e11d48; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    .wrap { max-width: 1000px; margin: 0 auto; display: grid; gap: 20px; }
+    .card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px rgb(0 0 0 / 0.05); }
+    .nav-card { display: flex; gap: 20px; padding: 12px 24px; align-items: center; }
     .nav-card a { text-decoration: none; color: #0284c7; font-weight: 600; font-size: 0.9rem; }
-    h1 { font-size: 1.8rem; color: #1e293b; margin: 0; }
-    label { display: block; font-size: 0.85rem; font-weight: 600; margin: 10px 0 5px; }
-    input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px; box-sizing: border-box; }
-    button { border: 0; border-radius: 10px; padding: 12px 18px; cursor: pointer; font-weight: 600; background: var(--primary); color: white; margin-top: 15px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border-bottom: 1px solid var(--border); padding: 12px 8px; text-align: left; }
-    pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 12px; font-size: 0.85rem; white-space: pre-wrap; }
+    h1 { font-size: 1.8rem; color: #1e293b; margin: 0 0 15px; }
+    h2 { font-size: 1.2rem; margin: 0 0 15px; }
+    label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 5px; color: #64748b; text-transform: uppercase; }
+    input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px; box-sizing: border-box; margin-bottom: 15px; }
+    button { border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; font-weight: 600; background: var(--primary); color: white; }
+    .btn-revoke { background: var(--danger); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border-bottom: 1px solid var(--border); padding: 12px 8px; text-align: left; font-size: 0.9rem; }
+    pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 12px; font-size: 0.85rem; white-space: pre-wrap; overflow-x: auto; }
   </style>
 </head>
 <body>
   <script>
-    // Única página que obliga a login
     const session = JSON.parse(localStorage.getItem('ssi_session'));
     if (!session || Date.now() > session.expireAt) {
       localStorage.removeItem('ssi_session');
@@ -33,26 +34,37 @@
 
   <div class="wrap">
     <div class="card nav-card">
-      <a href="/frontend_portal.html">🏠 Volver al Inicio</a>
+      <a href="/frontend_portal.html">🏠 Inicio</a>
       <span style="flex-grow: 1;"></span>
-      <span style="font-size: 0.9rem; margin-right: 15px;">Admin: <strong id="user-display"></strong></span>
-      <button onclick="localStorage.removeItem('ssi_session'); window.location.href='/frontend_login.html'" style="background:#e11d48; padding:8px 12px; margin:0;">Cerrar sesión</button>
+      <span style="font-size: 0.85rem;">Sesión: <strong id="user-display"></strong></span>
+      <button onclick="localStorage.removeItem('ssi_session'); window.location.href='/frontend_login.html'" style="background:var(--danger); padding:6px 12px; font-size:0.8rem;">Cerrar sesión</button>
     </div>
 
-    <div class="card">
-      <h1>Alta de Ciudadano</h1>
-      <p style="color:#64748b; margin-bottom: 20px;">Registro manual en la base de datos central de ciudadanos.</p>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-        <div><label>DNI</label><input id="dni" placeholder="12345678Z" /></div>
-        <div><label>Nombre</label><input id="nombre" placeholder="Nombre completo" /></div>
+    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px;">
+      <div class="card">
+        <h1>Alta de Ciudadano</h1>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+          <div><label>DNI</label><input id="dni" placeholder="12345678Z" /></div>
+          <div><label>Nombre</label><input id="nombre" placeholder="Nombre completo" /></div>
+        </div>
+        <label>Fecha de nacimiento</label>
+        <input id="fecha" placeholder="YYYY-MM-DD" />
+        <button id="btn-add">Registrar en DB</button>
       </div>
-      <label>Fecha de nacimiento (YYYY-MM-DD)</label>
-      <input id="fecha" placeholder="2000-01-01" />
-      <button id="btn-add">Guardar Ciudadano</button>
+
+      <div class="card" style="border-top: 4px solid var(--danger);">
+        <h1>Revocar Credencial</h1>
+        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Anula una credencial permanentemente en la Blockchain.</p>
+        <label>Hash de la Credencial</label>
+        <input id="rev-hash" placeholder="0x..." />
+        <label>Motivo</label>
+        <input id="rev-reason" placeholder="Ej: Pérdida de llaves" />
+        <button id="btn-revoke" class="btn-revoke">Revocar On-Chain</button>
+      </div>
     </div>
 
     <div class="card">
-      <h2>Listado Oficial</h2>
+      <h2>Listado de Ciudadanos Registrados</h2>
       <table>
         <thead><tr><th>ID</th><th>DNI</th><th>Nombre</th><th>Nacimiento</th></tr></thead>
         <tbody id="citizens-body"></tbody>
@@ -60,8 +72,8 @@
     </div>
 
     <div class="card">
-      <h3>Logs</h3>
-      <pre id="output">Listo.</pre>
+      <label>Consola de Actividad</label>
+      <pre id="output">Sistema listo.</pre>
     </div>
   </div>
 
@@ -78,7 +90,7 @@
         document.getElementById('citizens-body').innerHTML = data.items.map(c => `
           <tr><td>${c.id}</td><td>${c.numero_dni}</td><td>${c.nombre}</td><td>${c.fecha_nacimiento}</td></tr>
         `).join('');
-      } catch (e) { document.getElementById('output').textContent = e.message; }
+      } catch (e) { document.getElementById('output').textContent = "Error carga: " + e.message; }
     }
 
     document.getElementById('btn-add').onclick = async () => {
@@ -86,10 +98,24 @@
       try {
         const res = await fetch(`${apiBaseUrl}/api/admin/citizens_dni`, { method:'POST', headers:{'Content-Type':'application/json','Authorization':authHeader}, body:JSON.stringify(payload) });
         if (!res.ok) throw new Error((await res.json()).detail);
-        document.getElementById('output').textContent = "✅ Guardado.";
+        document.getElementById('output').textContent = "✅ Ciudadano guardado correctamente.";
         load();
-      } catch (e) { document.getElementById('output').textContent = "❌ " + e.message; }
+      } catch (e) { document.getElementById('output').textContent = "❌ Error: " + e.message; }
     };
+
+    document.getElementById('btn-revoke').onclick = async () => {
+      const hash = document.getElementById('rev-hash').value.trim();
+      const reason = document.getElementById('rev-reason').value.trim();
+      if(!hash) return alert("Introduce el hash");
+      try {
+        document.getElementById('output').textContent = "Enviando revocación a Blockchain...";
+        const res = await fetch(`${apiBaseUrl}/api/credentials/revoke`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ credential_hash: hash, reason: reason }) });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.detail);
+        document.getElementById('output').textContent = "✅ Credencial revocada con éxito.\nTX: " + body.tx.txHash;
+      } catch (e) { document.getElementById('output').textContent = "❌ Error revocación: " + e.message; }
+    };
+
     window.onload = load;
   </script>
 </body>
