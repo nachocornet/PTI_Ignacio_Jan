@@ -151,19 +151,9 @@
       <button class="login-btn" id="login-btn">Entrar</button>
     </div>
 
-    <div class="session-info" id="session-info">
-      <h2>✓ Sesión iniciada</h2>
-      <p id="session-user"></p>
-      <div class="portal-links">
-        <a class="portal-link" href="/issuer_admin.html">🏛️ Admin DB Ciudadanos</a>
-        <a class="portal-link" href="/verifier_dashboard.html">✔️ Verificador</a>
-        <a class="portal-link" href="/issuer_dashboard.html">🎫 Issuer (Debug)</a>
-      </div>
-      <button class="logout-btn" id="logout-btn">Cerrar sesión</button>
-    </div>
+    
   </div>
-
-  <script>
+<script>
     const SESSION_KEY = 'ssi_session';
     const SESSION_DURATION = 3600000; // 1 hora en ms
 
@@ -188,22 +178,6 @@
       return session;
     }
 
-    function clearSession() {
-      localStorage.removeItem(SESSION_KEY);
-    }
-
-    function showLoginForm() {
-      document.getElementById('login-form').style.display = 'block';
-      document.getElementById('session-info').style.display = 'none';
-      document.getElementById('username').focus();
-    }
-
-    function showSessionInfo(session) {
-      document.getElementById('login-form').style.display = 'none';
-      document.getElementById('session-info').style.display = 'block';
-      document.getElementById('session-user').textContent = `Usuario: ${session.username}`;
-    }
-
     document.getElementById('login-btn').addEventListener('click', async () => {
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
@@ -215,23 +189,15 @@
         return;
       }
 
-      // Validación simple contra credenciales admin
-      // En producción, verificarías contra un endpoint backend
       if (username === 'admin' && password === 'admin123') {
-        const session = setSession(username);
+        setSession(username);
         errorEl.style.display = 'none';
-        showSessionInfo(session);
+        
+        window.location.href = "/issuer_admin.html";
       } else {
         errorEl.textContent = 'Credenciales inválidas';
         errorEl.style.display = 'block';
       }
-    });
-
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      clearSession();
-      document.getElementById('username').value = '';
-      document.getElementById('password').value = '';
-      showLoginForm();
     });
 
     document.getElementById('password').addEventListener('keypress', (e) => {
@@ -240,12 +206,9 @@
       }
     });
 
-    // Mostrar formulario o sesión al cargar
-    const session = getSession();
-    if (session) {
-      showSessionInfo(session);
-    } else {
-      showLoginForm();
+    // Si ya tiene sesión, lo enviamos directo al admin sin pedir contraseña
+    if (getSession()) {
+      window.location.href = "/issuer_admin.html";
     }
   </script>
 </body>

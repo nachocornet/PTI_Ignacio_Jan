@@ -955,8 +955,8 @@
     }
 
     async function refreshConnections() {
-      const issuerUrl = $("issuer-url").value.trim();
-      const verifierUrl = $("verifier-url").value.trim();
+      const issuerUrl = window.SSI_CONFIG.urls.issuerApiBaseUrl;
+      const verifierUrl = window.SSI_CONFIG.urls.verifierApiBaseUrl;
 
       setChip("conn-issuer", "pending", "checking");
       setChip("conn-verifier", "pending", "checking");
@@ -1068,7 +1068,7 @@
       setBusy(btn, true);
 
       try {
-        const issuerUrl = $("issuer-url").value.trim();
+        const issuerUrl = window.SSI_CONFIG.urls.issuerApiBaseUrl;
         const did = $("holder-did").value.trim();
         const dni = $("dni").value.trim();
 
@@ -1157,7 +1157,7 @@
       setBusy(btn, true);
 
       try {
-        const verifierUrl = $("verifier-url").value.trim();
+        const verifierUrl = window.SSI_CONFIG.urls.verifierApiBaseUrl;
         let credential = state.credential;
         const raw = $("credential-json").value.trim();
         if (!credential && raw) {
@@ -1208,7 +1208,7 @@
       setBusy(btn, true);
 
       try {
-        const issuerUrl = $("issuer-url").value.trim();
+        const issuerUrl = window.SSI_CONFIG.urls.issuerApiBaseUrl;
         let credential = state.credential;
         const raw = $("credential-json").value.trim();
         if (!credential && raw) {
