@@ -130,7 +130,43 @@
         alert("Error al leer el archivo JSON.");
       }
     });
+    
+    document.getElementById('btn-revoke').onclick = async () => {
+      const out = document.getElementById('output');
+      const hash = document.getElementById('rev-hash').value.trim();
+      const reason = document.getElementById('rev-reason').value.trim() || "Revocación administrativa";
+      
+      if (!hash) return alert("Por favor, introduce o carga el hash de la credencial.");
 
+      try {
+        out.textContent = "Enviando orden de revocación a Blockchain Sepolia...";
+        
+        const res = await fetch(`${apiBaseUrl}/api/credentials/revoke`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': authHeader // Usa las credenciales admin definidas arriba
+          },
+          body: JSON.stringify({ 
+            credential_hash: hash,
+            reason: reason 
+          })
+        });
+
+        const body = await res.json();
+        
+        if (!res.ok) throw new Error(body.detail || "Error en la respuesta del servidor");
+
+        out.textContent = `✅ CREDENCIAL REVOCADA CORRECTAMENTE\nHash: ${hash}\nTransacción: ${body.tx_hash || 'Confirmada'}`;
+        alert("La credencial ha sido invalidada permanentemente en Blockchain.");
+        
+        // Limpiar campos tras el éxito
+        document.getElementById('rev-hash').value = "";
+        document.getElementById('rev-reason').value = "";
+      } catch (e) {
+        out.textContent = "❌ ERROR EN LA REVOCACIÓN: " + e.message;
+      }
+    };
     window.onload = load;
   </script>
 </body>

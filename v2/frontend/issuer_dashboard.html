@@ -139,16 +139,19 @@
     };
 
     document.getElementById('btn-download').onclick = () => {
-     if (!vcData) return;
-      
+      if (!vcData) return;
+
+      // 1. Obtener el valor del DNI del input
       const dniUsuario = document.getElementById('dni').value.trim() || "mi";
       
+      // 2. Construir el nombre dinámico: DNI + sufijo
       const fileName = `${dniUsuario}_virtual_credential.json`;
 
+      // 3. Generar la descarga
       const blob = new Blob([JSON.stringify(vcData, null, 2)], { type: "application/json" });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = fileName; 
+      a.download = fileName; // <--- Aquí se aplica el nombre dinámico
       a.click();
     };
   </script>
