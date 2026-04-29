@@ -74,12 +74,12 @@ async def verify_presentation(request: Request, data: dict):
     vc_payload = None
 
     try:
-  # 1. Verificar firma del Emisor en la VC (CON DEPURACIÓN)
+        # 1. Verificar firma del Emisor en la VC (Firma de Python)
         vc_payload = copy.deepcopy(vc)
         vc_proof = vc_payload.pop("proof")
         
-        # Generamos el canónico que el Verificador "cree" que es el correcto
-        vc_canonical = json.dumps(vc_payload, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+        # MODO PYTHON: Por defecto transforma la "ó" en \u00f3 (igual que el Issuer)
+        vc_canonical = json.dumps(vc_payload, separators=(',', ':'), sort_keys=True)
         
         issuer_recovered = Account.recover_message(
             encode_defunct(text=vc_canonical), 
@@ -94,22 +94,25 @@ async def verify_presentation(request: Request, data: dict):
                 status_code=401, 
                 detail={
                     "error": "Firma del Emisor no valida",
-                    "causa": "El contenido del JSON ha cambiado o el formato de serializacion es distinto",
                     "esperado_issuer": issuer_did_esperado,
                     "recuperado_de_la_firma": issuer_did_recuperado,
-                    "json_que_estoy_verificando": vc_canonical  # Esto es clave
+                    "json_que_estoy_verificando": vc_canonical
                 }
             )
 
-        # 2. Verificar firma del Poseedor en la VP
+        # 2. Verificar firma del Poseedor en la VP (Firma de JavaScript)
         vp_payload = copy.deepcopy(vp)
         vp_proof = vp_payload.pop("proof")
+        
+        # MODO JAVASCRIPT: Usamos ensure_ascii=False para mantener la "ó" literal (igual que tu navegador)
         vp_canonical = json.dumps(vp_payload, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+        
         holder_recovered = Account.recover_message(
             encode_defunct(text=vp_canonical), 
             signature=vp_proof["proofValue"]
         )
         
+        # Validacion de pertenencia (DUEÑO REAL)
         holder_did = f"did:ethr:{holder_recovered.lower()}"
         subject_did = vc_payload["credentialSubject"]["id"].lower()
         
@@ -119,7 +122,8 @@ async def verify_presentation(request: Request, data: dict):
                 detail={
                     "error": "El poseedor no es el titular de la credencial",
                     "esperado_subject_id": subject_did,
-                    "obtenido_de_la_firma": holder_did
+                    "obtenido_de_la_firma": holder_did,
+                    "json_que_estoy_verificando": vp_canonical
                 }
             )
 
@@ -127,7 +131,6 @@ async def verify_presentation(request: Request, data: dict):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error en validacion criptografica: {str(e)}")
-    
     try:
         bc = get_blockchain_client()
         issuer_did = vc_payload["issuer"]
