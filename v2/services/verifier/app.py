@@ -60,7 +60,6 @@ def _normalize_credential_status(vc_payload: dict) -> dict | None:
         "statusListIndex": status.get("statusListIndex"),
         "statusListCredential": status.get("statusListCredential"),
     }
-
 @app.post("/api/verify_presentation")
 @limiter.limit("10/minute")
 async def verify_presentation(request: Request, data: dict):
@@ -78,7 +77,7 @@ async def verify_presentation(request: Request, data: dict):
         # 1. Verificar firma del Emisor en la VC
         vc_payload = copy.deepcopy(vc)
         vc_proof = vc_payload.pop("proof")
-        vc_canonical = json.dumps(vc_payload, separators=(',', ':'), sort_keys=True)
+        vc_canonical = json.dumps(vc_payload, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
         issuer_recovered = Account.recover_message(
             encode_defunct(text=vc_canonical), 
             signature=vc_proof["proofValue"]
@@ -89,13 +88,16 @@ async def verify_presentation(request: Request, data: dict):
         # 2. Verificar firma del Poseedor en la VP
         vp_payload = copy.deepcopy(vp)
         vp_proof = vp_payload.pop("proof")
-        vp_canonical = json.dumps(vp_payload, separators=(',', ':'), sort_keys=True)
+        vp_canonical = json.dumps(vp_payload, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
         holder_recovered = Account.recover_message(
             encode_defunct(text=vp_canonical), 
             signature=vp_proof["proofValue"]
         )
         
-       if holder_did != subject_did:
+        holder_did = f"did:ethr:{holder_recovered.lower()}"
+        subject_did = vc_payload["credentialSubject"]["id"].lower()
+        
+        if holder_did != subject_did:
             raise HTTPException(
                 status_code=401, 
                 detail={
@@ -109,7 +111,7 @@ async def verify_presentation(request: Request, data: dict):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error en validacion criptografica: {str(e)}")
-
+    
     try:
         bc = get_blockchain_client()
         issuer_did = vc_payload["issuer"]
