@@ -192,8 +192,7 @@
       if (username === 'admin' && password === 'admin123') {
         setSession(username);
         errorEl.style.display = 'none';
-        
-        window.location.href = "/issuer_admin.html";
+        window.location.href = '/issuer_admin.html'; // REDIRECCIÓN DIRECTA
       } else {
         errorEl.textContent = 'Credenciales inválidas';
         errorEl.style.display = 'block';
@@ -206,9 +205,9 @@
       }
     });
 
-    // Si ya tiene sesión, lo enviamos directo al admin sin pedir contraseña
+    // Si ya tiene sesión, va directo al admin
     if (getSession()) {
-      window.location.href = "/issuer_admin.html";
+      window.location.href = '/issuer_admin.html';
     }
   </script>
 </body>

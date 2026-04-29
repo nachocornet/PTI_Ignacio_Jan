@@ -139,13 +139,11 @@
   <script>
     const config = window.SSI_CONFIG || {};
     const apiBaseUrl = (config.urls?.issuerApiBaseUrl || config.urls?.apiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
-    const apiBase = document.getElementById('api-base-url');
     const dni = document.getElementById('dni');
     const holderDid = document.getElementById('holder-did');
     const hash = document.getElementById('credential-hash');
     const out = document.getElementById('output');
 
-    apiBase.value = apiBaseUrl;
     let carnetGenerado = null; 
 
     function setOut(text) { out.textContent = text; }
@@ -193,7 +191,7 @@
       try {
         setOut("Emitiendo en Blockchain... Por favor, espera.");
         const payload = { did_ciudadano: holderDid.value.trim(), numero_dni: dni.value.trim() };
-        const r = await fetch(`${apiBase.value.replace(/\/$/, '')}/api/credentials/issue_dni`, {
+        const r = await fetch(`${apiBaseUrl}/api/credentials/issue_dni`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
         const body = await r.json();
@@ -237,7 +235,7 @@
       if (!confirm("¿Seguro que quieres invalidar esta credencial?")) return;
       try {
         const payload = { credential_hash: hash.value.trim(), reason: "Revocación de seguridad" };
-        const r = await fetch(`${apiBase.value.replace(/\/$/, '')}/api/credentials/revoke`, {
+        const r = await fetch(`${apiBaseUrl}/api/credentials/revoke`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
         const body = await r.json();

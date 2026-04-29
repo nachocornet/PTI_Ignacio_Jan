@@ -55,13 +55,11 @@
   <script>
     const config = window.SSI_CONFIG || {};
     const apiBaseUrl = (config.urls?.verifierApiBaseUrl || config.urls?.apiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
-    const apiBase = document.getElementById('api-base-url');
     const walletFile = document.getElementById('wallet-file');
     const vcFile = document.getElementById('vc-file');
     const vcJson = document.getElementById('vc-json');
     const out = document.getElementById('output');
 
-    apiBase.value = apiBaseUrl;
     let wallet = null;
     let did = null;
 
@@ -123,7 +121,7 @@
           proofValue: signature
         };
 
-        const r = await fetch(`${apiBase.value.replace(/\/$/, '')}/api/verify_presentation`, {
+        const r = await fetch(`${apiBaseUrl}/api/verify_presentation`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vp })
         });
         const body = await r.json();
