@@ -95,9 +95,15 @@ async def verify_presentation(request: Request, data: dict):
             signature=vp_proof["proofValue"]
         )
         
-        # Validacion de pertenencia (DUEÑO REAL)
-        if f"did:ethr:{holder_recovered.lower()}" != vc_payload["credentialSubject"]["id"].lower():
-            raise HTTPException(status_code=401, detail="El poseedor no es el titular de la credencial")
+       if holder_did != subject_did:
+            raise HTTPException(
+                status_code=401, 
+                detail={
+                    "error": "El poseedor no es el titular de la credencial",
+                    "esperado_subject_id": subject_did,
+                    "obtenido_de_la_firma": holder_did
+                }
+            )
 
     except HTTPException:
         raise
