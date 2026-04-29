@@ -3,67 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSI v2 Portal</title>
+  <title>SSI v2 | Portal de Identidad</title>
   <style>
-    body { font-family: sans-serif; background: #f2f5f4; color: #1f2933; margin: 0; padding: 24px; }
-    .wrap { max-width: 900px; margin: 0 auto; display: grid; gap: 16px; }
-    .card { background: #fff; border: 1px solid #d7e2de; border-radius: 14px; padding: 18px; }
-    h1 { margin: 0 0 8px; }
-    p { margin: 0 0 12px; color: #55636d; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-    a.btn { display: block; text-decoration: none; padding: 12px; border-radius: 10px; border: 1px solid #bfd8d2; background: #e9f7f4; color: #115e59; font-weight: 700; }
-    a.btn.secondary { background: #f3f7fb; border-color: #cad8e6; color: #1e3a5f; }
-    .hint { font-size: 0.9rem; color: #4d5e69; }
-    .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .logout-btn { padding: 8px 12px; background: #e11d48; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+    :root { --primary: #0f766e; --secondary: #1e293b; --accent: #0284c7; --bg: #f8fafc; --text: #334155; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+    .nav-top { display: flex; justify-content: flex-end; padding: 15px 30px; }
+    .admin-link { font-size: 0.85rem; color: #94a3b8; text-decoration: none; font-weight: 600; border: 1px solid #e2e8f0; padding: 5px 12px; border-radius: 20px; transition: 0.2s; }
+    .admin-link:hover { color: var(--secondary); border-color: var(--secondary); }
+    .main-container { max-width: 800px; margin: 60px auto; text-align: center; padding: 20px; }
+    h1 { font-size: 2.5rem; color: var(--secondary); margin-bottom: 10px; }
+    p.subtitle { color: #64748b; font-size: 1.1rem; margin-bottom: 40px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 40px; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; align-items: center; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+    .card i { font-size: 3rem; margin-bottom: 20px; }
+    .card h2 { color: var(--secondary); margin: 0 0 10px; }
+    .card p { color: #64748b; margin: 0; font-size: 0.95rem; }
   </style>
 </head>
 <body>
-  <script>
-    // Verificar sesión
-    const SESSION_KEY = 'ssi_session';
-    const session = (() => {
-      const stored = localStorage.getItem(SESSION_KEY);
-      if (!stored) return null;
-      const s = JSON.parse(stored);
-      if (Date.now() > s.expireAt) {
-        localStorage.removeItem(SESSION_KEY);
-        return null;
-      }
-      return s;
-    })();
-    
-    if (!session) {
-      window.location.href = '/frontend_login.html';
-    }
-  </script>
-  <div class="wrap">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h1 style="margin: 0;">SSI v2 - Portal Central</h1>
-      <div>
-        <span style="color: #55636d; margin-right: 12px;">Usuario: <strong id="session-user"></strong></span>
-        <button class="logout-btn" id="logout-btn">Cerrar sesión</button>
-      </div>
-    </div>
-    <div class="card">
-      <p>Interfaz principal con acceso a todos los servicios SSI.</p>
-      <div class="grid">
-        <a class="btn" href="/issuer_admin.html">🏛️ Admin Ciudadanos</a>
-        <a class="btn" href="/verifier_dashboard.html">✔️ Verificador</a>
-        <a class="btn secondary" href="/issuer_dashboard.html">🪪 Issuer (Debug)</a>
-      </div>
-    </div>
-    <div class="card hint">
-      En producción, cada módulo (admin, verifier) se deplega en dominios separados con autenticación y autorización estrictas.
-    </div>
+  <div class="nav-top">
+    <a href="/issuer_admin.html" class="admin-link">⚙️ Gestión de Sistema</a>
   </div>
 
-  <script>
-    document.getElementById('session-user').textContent = session?.username || 'Desconocido';
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      localStorage.removeItem(SESSION_KEY);
-      window.location.href = '/frontend_login.html';
-    });
-  </script>
+  <div class="main-container">
+    <h1>SSI v2 Ecosystem</h1>
+    <p class="subtitle">Gestiona tu identidad digital soberana basada en Blockchain.</p>
+
+    <div class="grid">
+      <a href="/issuer_dashboard.html" class="card">
+        <i>🪪</i>
+        <h2>Obtener DNI</h2>
+        <p>Solicita y emite tu credencial de identidad digital oficial.</p>
+      </a>
+
+      <a href="/verifier_dashboard.html" class="card">
+        <i>✔️</i>
+        <h2>Verificar Acceso</h2>
+        <p>Demuestra tu identidad de forma segura ante terceros.</p>
+      </a>
+    </div>
+  </div>
 </body>
 </html>

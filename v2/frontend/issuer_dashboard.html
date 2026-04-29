@@ -15,6 +15,7 @@
     .nav a { text-decoration: none; color: var(--accent); font-weight: 600; }
     h1 { color: #1e293b; margin: 0 0 10px; }
     .step { padding: 15px; border-radius: 12px; margin-bottom: 15px; background: #f0f9ff; border: 1px solid #bae6fd; }
+    .step-generate { background: #ecfdf5; border-color: #a7f3d0; }
     input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-top: 5px; }
     button { border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; font-weight: 600; background: var(--primary); color: white; margin-top: 10px; }
     pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 10px; overflow: auto; min-height: 100px; }
@@ -22,26 +23,32 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="nav"><a href="/frontend_portal.html">🏠 Inicio</a><a href="/issuer_admin.html">⚙️ Admin DB</a></div>
+    <div class="nav"><a href="/frontend_portal.html">🏠 Inicio</a></div>
     
-    <div class="card">
-      <h1>Emisión de DNI Digital</h1>
-      <div class="step">
-        <strong>1. Tu Identidad (Wallet)</strong>
-        <input type="file" id="walletInput" accept=".json">
-      </div>
-      <div class="step">
-        <strong>2. Validar Datos</strong>
-        <input id="dni" placeholder="DNI (ej: 12345678Z)">
-        <input id="did" readonly placeholder="DID (se autocompleta al cargar wallet)">
-      </div>
-      <button id="btn-issue">Generar DNI en Blockchain</button>
-      <button id="btn-download" style="display:none; background: #0284c7;">📥 Descargar Credencial</button>
+    <div class="card step step-generate">
+      <strong>Paso 0: ¿No tienes cartera?</strong>
+      <p style="font-size: 0.85rem; margin: 5px 0;">Genera una identidad nueva. Guarda el archivo .json para identificarte después.</p>
+      <button onclick="generarWallet()" style="background: #059669;">🆕 Generar nueva Identidad</button>
     </div>
 
     <div class="card">
-      <h3>Estado de Actividad</h3>
-      <pre id="output">Esperando...</pre>
+      <h1>Emisión de DNI Digital</h1>
+      <div class="step">
+        <strong>Paso 1: Carga tu Identidad (Wallet)</strong>
+        <input type="file" id="walletInput" accept=".json">
+      </div>
+      <div class="step">
+        <strong>Paso 2: Datos del Ciudadano</strong>
+        <input id="dni" placeholder="DNI (ej: 12345678Z)">
+        <input id="did" readonly placeholder="DID (se autocompleta)">
+      </div>
+      <button id="btn-issue">Generar DNI en Blockchain</button>
+      <button id="btn-download" style="display:none; background: #0284c7;">📥 Descargar DNI (JSON)</button>
+    </div>
+
+    <div class="card">
+      <h3>Estado</h3>
+      <pre id="output">Listo para operar.</pre>
     </div>
   </div>
 
@@ -49,6 +56,17 @@
     const config = window.SSI_CONFIG || {};
     const apiBaseUrl = (config.urls?.issuerApiBaseUrl || 'http://nattech.fib.upc.edu:40570').replace(/\/$/, '');
     let vcData = null;
+
+    function generarWallet() {
+      const wallet = ethers.Wallet.createRandom();
+      const data = { private_key: wallet.privateKey, address: wallet.address, did: `did:ethr:${wallet.address}` };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = "mi_cartera_ssi.json";
+      a.click();
+      alert("Identidad descargada.");
+    }
 
     document.getElementById('walletInput').onchange = async (e) => {
       const data = JSON.parse(await e.target.files[0].text());
@@ -58,23 +76,24 @@
     document.getElementById('btn-issue').onclick = async () => {
       const out = document.getElementById('output');
       try {
-        out.textContent = "Emitiendo... Por favor, espera.";
+        out.textContent = "Emitiendo...";
         const res = await fetch(`${apiBaseUrl}/api/credentials/issue_dni`, {
           method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ did_ciudadano: document.getElementById('did').value, numero_dni: document.getElementById('dni').value })
         });
         const body = await res.json();
-        if (!res.ok) throw new Error(body.detail || "Error en el servidor");
+        if (!res.ok) throw new Error(body.detail);
         vcData = body.credential;
         document.getElementById('btn-download').style.display = 'inline-block';
-        out.textContent = "✅ DNI emitido correctamente y registrado on-chain.";
+        out.textContent = "✅ Éxito: DNI emitido en blockchain.";
       } catch (e) { out.textContent = "❌ " + e.message; }
     };
 
     document.getElementById('btn-download').onclick = () => {
+      const blob = new Blob([JSON.stringify(vcData, null, 2)], { type: "application/json" });
       const a = document.createElement('a');
-      a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(vcData));
-      a.download = "mi_dni_digital.json";
+      a.href = URL.createObjectURL(blob);
+      a.download = "dni_digital.json";
       a.click();
     };
   </script>
