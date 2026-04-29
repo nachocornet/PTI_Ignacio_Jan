@@ -74,16 +74,32 @@ async def verify_presentation(request: Request, data: dict):
     vc_payload = None
 
     try:
-        # 1. Verificar firma del Emisor en la VC
+  # 1. Verificar firma del Emisor en la VC (CON DEPURACIÓN)
         vc_payload = copy.deepcopy(vc)
         vc_proof = vc_payload.pop("proof")
+        
+        # Generamos el canónico que el Verificador "cree" que es el correcto
         vc_canonical = json.dumps(vc_payload, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+        
         issuer_recovered = Account.recover_message(
             encode_defunct(text=vc_canonical), 
             signature=vc_proof["proofValue"]
         )
-        if f"did:ethr:{issuer_recovered.lower()}" != vc_payload["issuer"].lower():
-            raise HTTPException(status_code=401, detail="Firma del Emisor no valida")
+        
+        issuer_did_recuperado = f"did:ethr:{issuer_recovered.lower()}"
+        issuer_did_esperado = vc_payload["issuer"].lower()
+
+        if issuer_did_recuperado != issuer_did_esperado:
+            raise HTTPException(
+                status_code=401, 
+                detail={
+                    "error": "Firma del Emisor no valida",
+                    "causa": "El contenido del JSON ha cambiado o el formato de serializacion es distinto",
+                    "esperado_issuer": issuer_did_esperado,
+                    "recuperado_de_la_firma": issuer_did_recuperado,
+                    "json_que_estoy_verificando": vc_canonical  # Esto es clave
+                }
+            )
 
         # 2. Verificar firma del Poseedor en la VP
         vp_payload = copy.deepcopy(vp)
