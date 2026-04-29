@@ -63,27 +63,50 @@
 
     document.getElementById('btn-verify').onclick = async () => {
       const out = document.getElementById('output');
-      if (!wallet || !vc) return alert("Carga ambos archivos");
+      if (!wallet || !vc) return alert("Por favor, carga ambos archivos JSON.");
 
       try {
-        out.textContent = "Verificando en Blockchain...";
+        out.textContent = "Consultando Blockchain Sepolia...";
+        
         const vp = {
           '@context': ['https://www.w3.org/2018/credentials/v1'],
           type: ['VerifiablePresentation'],
           verifiableCredential: vc
         };
-        const canonical = JSON.stringify(vp, Object.keys(vp).sort());
+
+        function canonicalize(obj) {
+            if (Array.isArray(obj)) return obj.map(canonicalize);
+            if (obj !== null && typeof obj === 'object') {
+                return Object.keys(obj).sort().reduce((acc, key) => {
+                    acc[key] = canonicalize(obj[key]);
+                    return acc;
+                }, {});
+            }
+            return obj;
+        }
+
+        const canonical = JSON.stringify(canonicalize(vp));
+        // ---------------------------------------------------------------
+
         const signature = await wallet.signMessage(canonical);
-        vp.proof = { type: 'EcdsaSecp256k1RecoverySignature2020', proofPurpose: 'authentication', verificationMethod: `did:ethr:${wallet.address}`, proofValue: signature };
+        vp.proof = { 
+            type: 'EcdsaSecp256k1RecoverySignature2020', 
+            proofPurpose: 'authentication', 
+            verificationMethod: `did:ethr:${wallet.address}`, 
+            proofValue: signature 
+        };
 
         const res = await fetch(`${apiBaseUrl}/api/verify_presentation`, {
           method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ vp })
         });
+        
         const body = await res.json();
-        if (!res.ok) throw new Error(body.detail);
+        if (!res.ok) throw new Error(body.detail || "Verificación fallida");
 
-        out.textContent = `✅ ACCESO CONCEDIDO\n------------------\nIssuer OK: ${body.onchain.issuerAuthorized}\nHolder Activo: ${body.onchain.holderDidActive}\nNo Revocada: ${!body.onchain.credentialRevoked}`;
-      } catch (e) { out.textContent = "❌ ACCESO DENEGADO: " + e.message; }
+        out.textContent = `✅ ACCESO AUTORIZADO\n----------------------\nIssuer: Válido\nHolder: Activo\nBlockchain Status: No Revocado`;
+      } catch (e) { 
+        out.textContent = "❌ ACCESO DENEGADO: " + e.message; 
+      }
     };
   </script>
 </body>
