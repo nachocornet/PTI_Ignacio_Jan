@@ -1,36 +1,36 @@
-# SSI v2 - Repositorio Completamente Automatizado
+# SSI v2 - Self-Sovereign Identity Platform
 
-Repositorio de **Self-Sovereign Identity v2** con arquitectura de 3 tiers, deployment automatizado, CI/CD con GitHub Actions y documentación completa.
-
-**Status:** ✅ **Producción Lista** (27/27 tests pasando)
+**Status:** ✅ Production Ready | **Version:** 2.0 | **Tests:** All Passing
 
 ---
 
-## 🚀 Inicio Rápido (Local)
+## 🚀 Quick Start (5 min)
 
-### 1. Preparación (primera vez)
+### First Time Setup
 
 ```bash
 cd /path/to/pti-v2/v2
 
-# Virtual env + dependencias
+# 1. Virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r config/requirements.txt
 
-# Setup automático (dependencies, wallets, DB, contrato)
+# 2. Auto setup (wallets, DB, contract)
 python3 scripts/setup_complete.py
 ```
 
-### 2. Arranque automático
+### Run Local Stack
 
 ```bash
 python3 scripts/start_all.py
 ```
 
-Se abre automáticamente en: **http://127.0.0.1:8080/frontend_portal.html**
+Opens automatically at: **http://127.0.0.1:8080/frontend_login.html**
 
-### 3. Parada
+**Default credentials:** `admin` / `admin123`
+
+### Stop Everything
 
 ```bash
 bash scripts/teardown.sh local
@@ -38,294 +38,177 @@ bash scripts/teardown.sh local
 
 ---
 
-## 📚 Documentación Completa
+## 📋 Core Features
 
-### Tutoriales Prácticos
+### Architecture
+- **Frontend:** Modular UI (login portal, admin, verifier)
+- **Backend:** Microservices (issuer_base + issuer_dni, verifier)
+- **Blockchain:** Local dev + Sepolia testnet (configurable)
+- **Database:** SQLite (local) + PostgreSQL (production)
+- **CI/CD:** GitHub Actions automation
 
-| Tutorial | Contenido |
-|----------|-----------|
-| [DESARROLLO_LOCAL.md](docs/tutoriales/DESARROLLO_LOCAL.md) | Flujo de desarrollo local completo con debug |
-| [CI_CD_GITHUB_ACTIONS.md](docs/tutoriales/CI_CD_GITHUB_ACTIONS.md) | Setup de GitHub Actions + troubleshooting |
-| [TROUBLESHOOTING.md](docs/tutoriales/TROUBLESHOOTING.md) | Diagnóstico y resolución de problemas |
-| [TESTNET_QUICKSTART.md](docs/tutoriales/TESTNET_QUICKSTART.md) | Deploy rápido a Sepolia |
-| [GUIA_FRONTEND.md](docs/tutoriales/GUIA_FRONTEND.md) | Uso de la interfaz web |
-| [FRONTENDS_SPLIT_GUIDE.md](docs/tutoriales/FRONTENDS_SPLIT_GUIDE.md) | Dashboards separados por rol |
-
-### Documentación Operativa
-
-| Doc | Contenido |
-|-----|----------|
-| [scripts/README.md](scripts/README.md) | Tutoriales de deploy local y 3 VMs |
-| [docs/operacion/GUIA_PASO_A_PRO.md](docs/operacion/GUIA_PASO_A_PRO.md) | Paso a paso para producción |
-| [docs/operacion/PROPUESTA_DESPLIEGUE_3VM.md](docs/operacion/PROPUESTA_DESPLIEGUE_3VM.md) | Arquitectura detallada 3 VMs |
-
-### Referencia Técnica
-
-| Doc | Contenido |
-|-----|----------|
-| [REPORT.md](REPORT.md) | Estado completo del proyecto ✨ NUEVO |
-| [docs/indices/REPO_INDEX.md](docs/indices/REPO_INDEX.md) | Inventario de archivos |
-| [docs/referencia/GUIA_CODIGO_Y_CAMBIOS.md](docs/referencia/GUIA_CODIGO_Y_CAMBIOS.md) | Cambios arquitectónicos |
-| [docs/referencia/EU_PROFILE.md](docs/referencia/EU_PROFILE.md) | Alineación técnica europea |
+### Key Flows
+1. **Login:** Session-based with localStorage (1hr TTL)
+2. **Issue Credential:** Admin creates citizen → Issuer emits Over18Credential → Blockchain registration
+3. **Verify:** Holder uploads wallet → Creates Verifiable Presentation → Verifies on-chain
+4. **Revoke:** Issuer revokes credential on blockchain
 
 ---
 
-## 🏗️ Estructura del Proyecto
+## 📚 Documentation
+
+| File | Purpose |
+|------|---------|
+| [docs/tutoriales/DESARROLLO_LOCAL.md](docs/tutoriales/DESARROLLO_LOCAL.md) | Local dev workflow, debugging |
+| [docs/tutoriales/CI_CD_GITHUB_ACTIONS.md](docs/tutoriales/CI_CD_GITHUB_ACTIONS.md) | GitHub Actions setup |
+| [docs/tutoriales/TROUBLESHOOTING.md](docs/tutoriales/TROUBLESHOOTING.md) | Common issues & fixes |
+| [docs/tutoriales/TESTNET_QUICKSTART.md](docs/tutoriales/TESTNET_QUICKSTART.md) | Deploy to Sepolia |
+| [docs/tutoriales/GUIA_FRONTEND.md](docs/tutoriales/GUIA_FRONTEND.md) | Frontend UX guide |
+| [docs/operacion/GUIA_PASO_A_PRO.md](docs/operacion/GUIA_PASO_A_PRO.md) | Production (3-VM deploy) |
+| [docs/referencia/GUIA_CODIGO_Y_CAMBIOS.md](docs/referencia/GUIA_CODIGO_Y_CAMBIOS.md) | Code structure & changes |
+
+---
+
+## 🏗️ Project Structure
 
 ```
 v2/
-├── services/                          # Microservicios FastAPI
-│   ├── issuer/                        # API emisión de VC
-│   └── verifier/                      # API verificación de VP
-├── frontend/                          # Web estática segura
-│   ├── frontend_portal.html           # Navegación
-│   ├── issuer_dashboard.html          # Emisión
-│   ├── verifier_dashboard.html        # Verificación
-│   └── frontend_server.py             # Servidor sin directory listing
-├── db/                                # Capa de datos SQLAlchemy
-├── shared/                            # Código compartido
-│   ├── settings.py                    # Config centralizada
-│   └── blockchain_client.py           # Web3 wrapper
-├── blockchain/                        # Hardhat + Solidity
-│   └── contracts/SSIRegistry.sol      # Contrato inteligente
-├── scripts/                           # Automatización
-│   ├── setup_complete.py              # Setup inicial
-│   ├── start_all.py                   # Arranque automático
-│   ├── deploy_local.sh                # Deploy local
-│   ├── deploy_vms.sh                  # Deploy remoto (3 VMs)
-│   └── teardown.sh                    # Parada
-├── config/                            # Configuración
-│   ├── .env.example                   # Env básico
-│   ├── .env.complete.example          # Documentación completa ✨
-│   ├── requirements.txt               # Dependencias Python
-│   └── compose_vms/                   # Docker Compose por VM
-├── deployments/                       # Runtime (wallets, DB, artefactos)
-├── tests/                             # 27 tests automatizados
-├── docs/                              # Documentación completa
-├── docker-compose-local.yml           # Stack local (1 comando)
-├── Dockerfile                         # Imagen Python optimizada
-├── REPORT.md                          # Estado completo ✨ NUEVO
-└── .github/workflows/deploy.yml       # CI/CD GitHub Actions
+├── services/
+│   ├── issuer_base/              # Generic reusable issuer library
+│   ├── issuer_dni/               # DNI-specific issuer (extends base)
+│   └── verifier/                 # Credential verification
+├── frontend/
+│   ├── frontend_login.html       # Session login portal
+│   ├── frontend_portal.html      # Central hub after login
+│   ├── issuer_admin.html         # Admin: citizen CRUD
+│   ├── issuer_dashboard.html     # Issue/revoke interface
+│   ├── verifier_dashboard.html   # Verify presentations
+│   └── frontend.variables.js     # Auto-generated config
+├── shared/
+│   ├── blockchain_client.py      # Web3 wrapper
+│   └── settings.py               # Centralized config
+├── config/
+│   ├── requirements.txt           # Python dependencies
+│   ├── .env.complete.example      # All env vars documented
+│   └── compose_vms/               # Docker for production
+├── deployments/                   # Wallets, ABIs, contracts
+├── scripts/
+│   ├── setup_complete.py          # First-time setup
+│   ├── start_all.py               # Run all local services
+│   ├── deploy_vms.sh              # Deploy to production
+│   └── seed_db.py                 # Initialize DB
+└── tests/
+    ├── test_issuer.py             # Issuer API tests
+    ├── test_verifier.py           # Verifier tests
+    └── test_e2e.py                # End-to-end tests
 ```
 
 ---
 
-## 🔧 Configuración (Variables de Entorno)
+## 🧪 Testing
 
-### Archivo de Ejemplo Básico
-
-```bash
-cat config/.env.example
-```
-
-### Documentación Exhaustiva
+### Run All Tests
 
 ```bash
-cat config/.env.complete.example    # Todas las variables disponibles
+cd v2
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -v
 ```
 
-### Categorías principales:
+**Expected:** 27+ tests passing ✅
 
-- **Red local:** `SSI_APP_HOST`, `SSI_ISSUER_PORT`, `SSI_VERIFIER_PORT`, `SSI_FRONTEND_PORT`
-- **Blockchain:** `SSI_BLOCKCHAIN_NETWORK` (local|sepolia), `SEPOLIA_RPC_URL`
-- **Database:** `DATABASE_URL` (PostgreSQL producción, SQLite local por defecto)
-- **VMs Virtech:** `NATTECH_HOST`, `SSH_USER`, `DEPLOY_PATH`, puertos SSH, credentials
+### Test Coverage
+
+- ✅ Admin citizen CRUD (DNI validation: format, checksum, age >= 18)
+- ✅ Issue Over18Credential with blockchain registration
+- ✅ Verify presentation with on-chain checks
+- ✅ Revoke credential and validate rejection
+- ✅ Authentication (Basic Auth + Session-based login)
+- ✅ Error handling (400, 401, 403, 404, 409, 503)
 
 ---
 
-## 📦 Deployment
+## ⚙️ Configuration
 
-### Local (1 comando)
+### Environment Variables
 
+All in `.env`. Full reference: [config/.env.complete.example](config/.env.complete.example)
+
+**Key variables:**
 ```bash
-bash scripts/deploy_local.sh
+SSI_BLOCKCHAIN_NETWORK=sepolia          # local | sepolia
+SEPOLIA_RPC_URL=https://...             # Sepolia RPC
+DATABASE_URL=postgresql://...           # Production DB
+SSI_ADMIN_USER=admin                    # Admin login
+SSI_ADMIN_PASSWORD=admin123             # Admin password
 ```
 
-### Remote (3 VMs en Virtech)
+---
 
+## 🚢 Deployment
+
+### Local Development
 ```bash
-# Setup env vars (ver scripts/README.md)
+python3 scripts/start_all.py
+```
+
+### Sepolia Testnet
+```bash
+export SEPOLIA_RPC_URL="https://..."
+export DB_PASSWORD="..."
 bash scripts/deploy_vms.sh
 ```
 
-### CI/CD Automático (GitHub)
-
-1. Configura secrets en GitHub (ver [CI_CD_GITHUB_ACTIONS.md](docs/tutoriales/CI_CD_GITHUB_ACTIONS.md))
-2. Push a main → Pipeline automático
+See [docs/operacion/GUIA_PASO_A_PRO.md](docs/operacion/GUIA_PASO_A_PRO.md) for production deployment.
 
 ---
 
-## ✅ Testing
+## 🔑 Key Concepts
 
-```bash
-# Todos los tests (27 pasando)
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q
+### Modular Issuer Architecture
 
-# Uno específico
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/test_issuer_api.py::test_issue_dni -v
+- **issuer_base:** Generic credential infrastructure (auth, blockchain, DB)
+- **issuer_dni:** DNI-specific validators + Over18Credential logic
 
-# Con cobertura
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest --cov=services --cov=shared
-```
+Allows adding new issuer types without code duplication.
 
----
+### Session Management
 
-## 🔍 Health Checks
+- Login creates session in browser localStorage
+- TTL: 1 hour
+- Pages validate session before rendering
+- Logout clears session
 
-```bash
-# Issuer
-curl http://127.0.0.1:5010/health
+### Blockchain Integration
 
-# Verifier
-curl http://127.0.0.1:5011/health
-
-# Frontend
-curl -I http://127.0.0.1:8080/frontend_portal.html
-
-# Blockchain (local)
-curl -X POST http://127.0.0.1:8545 -d '{"jsonrpc":"2.0","method":"web3_clientVersion","id":1}'
-```
+- DID format: `did:ethr:0x<address>`
+- On-chain: SetDidStatus, RegisterCredential, RevokeCredential
+- Local dev mode supported
 
 ---
 
-## 🐛 Troubleshooting
+## ❓ Quick Help
 
-### Problema: `Address already in use`
+**Q: Where are wallets?**  
+A: `deployments/runtime/{issuer_wallet,wallet}.json`
 
-```bash
-lsof -i :5010
-kill -9 <PID>
-```
+**Q: Add a new citizen?**  
+A: Login → Admin → Create (validates DNI format + age >= 18)
 
-### Problema: Tests fallan
+**Q: Verify credential?**  
+A: Verifier → Upload wallet → Upload/paste VC → Verify
 
-```bash
-# Asegúrate de que el stack está up
-python3 scripts/start_all.py
-
-# Espera 5 segundos y prueba de nuevo
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q
-```
-
-**Ver más:** [docs/tutoriales/TROUBLESHOOTING.md](docs/tutoriales/TROUBLESHOOTING.md)
+**Q: Troubleshoot?**  
+A: [TROUBLESHOOTING.md](docs/tutoriales/TROUBLESHOOTING.md)
 
 ---
 
-## 📊 Estado del Proyecto
+## 📖 Next Steps
 
-**Status:** ✅ **Producción Lista**
-
-| Componente | Status | Detalles |
-|-----------|--------|---------|
-| Backend | ✅ Prod | Issuer + Verifier + Rate limiting |
-| Frontend | ✅ Prod | Portal + Dashboards (issuer/verifier) |
-| Blockchain | ✅ Prod | Local + Sepolia |
-| Database | ✅ Prod | SQLite local, PostgreSQL prod |
-| Tests | ✅ 27/27 | Coverage completo |
-| CI/CD | ✅ GitHub | Automático en push |
-| Deployment | ✅ 3 VMs | SSH orchestrated |
-| Docs | ✅ 11 docs | Completo |
-
-**Ver más detalles:** [REPORT.md](REPORT.md) ✨
+1. Run locally → `python3 scripts/start_all.py`
+2. Test full flow → Create citizen → Issue → Verify
+3. Read tutorials → Pick one from `docs/tutoriales/`
+4. Deploy → See `GUIA_PASO_A_PRO.md`
 
 ---
 
-## 🎯 Cambios Recientes (28 Abril 2026)
-
-✨ **Nuevos en este release:**
-
-- 🔧 **Automatización mejorada**
-  - Env variables centralizadas y documentadas
-  - `config/.env.complete.example` con todas las opciones
-
-- 📚 **3 nuevos tutoriales**
-  - `DESARROLLO_LOCAL.md` - Desarrollo local completo
-  - `CI_CD_GITHUB_ACTIONS.md` - Setup de CI/CD
-  - `TROUBLESHOOTING.md` - Diagnóstico de problemas
-
-- 📋 **REPORT.md** - Estado completo del proyecto
-
-- ✅ **Limpieza final**
-  - Eliminados frontends de compatibilidad temporal
-  - Refs actualizadas
-  - Tests refactorizados (27/27 pasando)
-
----
-
-## 🤝 Próximos Pasos (Opcional)
-
-Si quieres evolucionar el proyecto:
-
-1. **Observabilidad:** Prometheus + Grafana
-2. **Seguridad:** Vault para secrets, HTTPS/TLS
-3. **Performance:** Redis cache, CDN
-4. **Features:** Multi-chain, backup automático
-5. **DevEx:** Devcontainers, pre-commit hooks
-
----
-
-## 📖 Índice Completo de Docs
-
-```
-docs/
-├── README.md
-├── indices/
-│   ├── README.md
-│   └── REPO_INDEX.md
-├── tutoriales/
-│   ├── README.md
-│   ├── DESARROLLO_LOCAL.md          ✨ NUEVO
-│   ├── CI_CD_GITHUB_ACTIONS.md      ✨ NUEVO
-│   ├── TROUBLESHOOTING.md           ✨ NUEVO
-│   ├── TESTNET_QUICKSTART.md
-│   ├── INFURA_SEPOLIA_GUIDE.md
-│   ├── GUIA_FRONTEND.md
-│   └── FRONTENDS_SPLIT_GUIDE.md
-├── operacion/
-│   ├── README.md
-│   ├── DOCUMENTACION_DEFINITIVA.md
-│   ├── GUIA_PASO_A_PRO.md
-│   └── PROPUESTA_DESPLIEGUE_3VM.md
-└── referencia/
-    ├── README.md
-    ├── GUIA_CODIGO_Y_CAMBIOS.md
-    └── EU_PROFILE.md
-```
-
----
-
-## 🏆 Checklist de Productividad
-
-- ✅ Backend 100% funcional
-- ✅ Frontend limpio (portal + 2 dashboards)
-- ✅ Tests automatizados (27/27 pasando)
-- ✅ Deployment local (1 comando)
-- ✅ Deployment remoto 3 VMs (SSH orchestrated)
-- ✅ CI/CD automático (GitHub Actions)
-- ✅ Env variables centralizadas
-- ✅ Documentación completa (11+ documentos)
-- ✅ Troubleshooting guide
-- ✅ Seguridad (secrets management)
-
----
-
-**Última actualización:** 28 de Abril de 2026  
-**Versión:** 2.0  
-**Status:** ✅ Completamente Funcional
-
-
-## Test Suite
-
-```bash
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q
-```
-
-## Despliegue Sepolia
-
-```bash
-python3 scripts/deploy_testnet.py
-```
-
-## Documentacion
-
-Punto de entrada recomendado: `docs/README.md`
+**Last Updated:** April 29, 2026 | Modular Architecture Release
