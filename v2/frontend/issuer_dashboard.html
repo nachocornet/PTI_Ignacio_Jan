@@ -139,12 +139,16 @@
     };
 
     document.getElementById('btn-download').onclick = () => {
-      if (!vcData) return;
-      // Descargar con formato (2 espacios de sangría) para que sea legible
+     if (!vcData) return;
+      
+      const dniUsuario = document.getElementById('dni').value.trim() || "mi";
+      
+      const fileName = `${dniUsuario}_virtual_credential.json`;
+
       const blob = new Blob([JSON.stringify(vcData, null, 2)], { type: "application/json" });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = "mi_dni_digital.json";
+      a.download = fileName; 
       a.click();
     };
   </script>
