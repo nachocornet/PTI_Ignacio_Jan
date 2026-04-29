@@ -135,10 +135,6 @@ async def create_citizen_dni(
     if not validate_fecha_format(fecha_nacimiento):
         raise HTTPException(status_code=400, detail="fecha_nacimiento debe tener formato YYYY-MM-DD")
 
-    # Validar edad >= 18
-    if not validate_age(fecha_nacimiento, min_age=18):
-        raise HTTPException(status_code=400, detail="El ciudadano debe ser mayor de edad (>= 18)")
-
     # Verificar que no exista
     existing = db.query(CitizenDNI).filter(CitizenDNI.numero_dni == numero_dni).first()
     if existing:
@@ -181,15 +177,12 @@ async def issue_dni(request: Request, data: dict, db: Session = Depends(get_db))
     if not ciudadano:
         raise HTTPException(status_code=404, detail="Ciudadano DNI no encontrado")
 
-    # Validar edad >= 18
-    if not validate_age(ciudadano.fecha_nacimiento, min_age=18):
-        raise HTTPException(status_code=403, detail="El ciudadano es menor de edad")
-
     # Construir VC Over18
+    es_mayor = validate_age(ciudadano.fecha_nacimiento, min_age=18) # Cálculo dinámico
     vc = _build_vc(
         credential_type="Over18Credential",
         did_usuario=did_usuario,
-        credential_subject={"isOver18": True},
+        credential_subject={"isOver18": es_mayor}, # <--- Aquí se guarda True o False
         extra_fields={
             "termsOfUse": [
                 {
