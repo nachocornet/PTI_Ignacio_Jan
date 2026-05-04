@@ -186,7 +186,7 @@ def test_issue_dni_missing_citizen_returns_404(monkeypatch):
     assert response.status_code == 404
 
 
-def test_issue_dni_underage_returns_403(monkeypatch):
+def test_issue_dni_underage_returns_credential_with_false_flag(monkeypatch):
     client = _build_test_client(monkeypatch)
     response = client.post(
         "/api/credentials/issue_dni",
@@ -195,8 +195,9 @@ def test_issue_dni_underage_returns_403(monkeypatch):
             "numero_dni": "87654321B",
         },
     )
-    assert response.status_code == 403
-    assert "menor" in response.text.lower()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["credential"]["credentialSubject"]["isOver18"] is False
 
 
 def test_issue_dni_success_returns_signed_credential(monkeypatch):

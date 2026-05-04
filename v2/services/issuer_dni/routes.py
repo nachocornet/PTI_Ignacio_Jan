@@ -179,8 +179,6 @@ async def issue_dni(request: Request, data: dict, db: Session = Depends(get_db))
 
     # Construir VC Over18
     es_mayor = validate_age(ciudadano.fecha_nacimiento, min_age=18) # Cálculo dinámico
-    if not es_mayor:
-        raise HTTPException(status_code=403, detail="Ciudadano menor de edad")
 
     vc = _build_vc(
         credential_type="Over18Credential",
