@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#fff7ed"/>
+  <rect x="100" y="70" width="1000" height="580" rx="26" fill="#ffffff" stroke="#fdba74"/>
+  <text x="140" y="125" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#9a3412">Issuer Dashboard</text>
+  <text x="140" y="165" font-family="Arial, sans-serif" font-size="20" fill="#7c2d12">Emisión y revocación de credenciales</text>
+  <rect x="140" y="220" width="920" height="120" rx="18" fill="#fffbeb" stroke="#f59e0b"/>
+  <text x="180" y="270" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#92400e">Emisión</text>
+  <text x="180" y="305" font-family="Arial, sans-serif" font-size="18" fill="#92400e">Crear credencial Over18 y registrarla en blockchain</text>
+  <rect x="140" y="370" width="920" height="120" rx="18" fill="#fef2f2" stroke="#ef4444"/>
+  <text x="180" y="420" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#991b1b">Revocación</text>
+  <text x="180" y="455" font-family="Arial, sans-serif" font-size="18" fill="#991b1b">Revocar credenciales desde el issuer autorizado</text>
+  <rect x="140" y="520" width="920" height="80" rx="18" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="180" y="570" font-family="Arial, sans-serif" font-size="18" fill="#475569">Incluye selector de wallet y exportación JSON</text>
+</svg>

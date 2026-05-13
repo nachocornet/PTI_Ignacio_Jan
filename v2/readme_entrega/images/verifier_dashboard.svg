@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#f8fafc"/>
+  <rect x="100" y="70" width="1000" height="580" rx="26" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="140" y="125" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#0f172a">Verifier Dashboard</text>
+  <text x="140" y="165" font-family="Arial, sans-serif" font-size="20" fill="#475569">Firma y verificación de presentaciones</text>
+  <rect x="140" y="220" width="920" height="120" rx="18" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="180" y="270" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#1d4ed8">Wallet</text>
+  <text x="180" y="305" font-family="Arial, sans-serif" font-size="18" fill="#1d4ed8">Carga del wallet del holder y firma local</text>
+  <rect x="140" y="370" width="920" height="120" rx="18" fill="#ecfdf5" stroke="#22c55e"/>
+  <text x="180" y="420" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#166534">Verificación</text>
+  <text x="180" y="455" font-family="Arial, sans-serif" font-size="18" fill="#166534">Comprobación de firma, issuer y estado on-chain</text>
+  <rect x="140" y="520" width="920" height="80" rx="18" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="180" y="570" font-family="Arial, sans-serif" font-size="18" fill="#475569">Resultado autorizado / denegado con detalle</text>
+</svg>

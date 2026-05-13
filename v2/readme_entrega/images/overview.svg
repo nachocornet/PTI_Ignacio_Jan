@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#f8fafc"/>
+  <rect x="40" y="40" width="1120" height="640" rx="28" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="70" y="105" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#0f172a">SSI v2 - Visión general</text>
+  <text x="70" y="150" font-family="Arial, sans-serif" font-size="22" fill="#475569">Plataforma de identidad autosoberana con issuer, verifier y blockchain.</text>
+
+  <rect x="90" y="220" width="280" height="130" rx="20" fill="#ecfeff" stroke="#06b6d4"/>
+  <text x="130" y="270" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#155e75">Frontend</text>
+  <text x="130" y="305" font-family="Arial, sans-serif" font-size="20" fill="#155e75">Portal + issuer + verifier</text>
+
+  <rect x="460" y="220" width="280" height="130" rx="20" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="515" y="270" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#3730a3">Servicios</text>
+  <text x="515" y="305" font-family="Arial, sans-serif" font-size="20" fill="#3730a3">issuer_base, issuer_dni, verifier</text>
+
+  <rect x="830" y="220" width="280" height="130" rx="20" fill="#f0fdf4" stroke="#22c55e"/>
+  <text x="895" y="270" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#166534">Blockchain</text>
+  <text x="895" y="305" font-family="Arial, sans-serif" font-size="20" fill="#166534">DID, credenciales, revocación</text>
+
+  <line x1="370" y1="285" x2="460" y2="285" stroke="#94a3b8" stroke-width="5" marker-end="url(#arrow)"/>
+  <line x1="740" y1="285" x2="830" y2="285" stroke="#94a3b8" stroke-width="5" marker-end="url(#arrow)"/>
+
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="8" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect x="90" y="430" width="1020" height="140" rx="20" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="130" y="480" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#9a3412">Flujo principal</text>
+  <text x="130" y="520" font-family="Arial, sans-serif" font-size="20" fill="#9a3412">1) Crear ciudadano  2) Emitir credencial  3) Verificar presentación  4) Revocar si hace falta</text>
+</svg>
